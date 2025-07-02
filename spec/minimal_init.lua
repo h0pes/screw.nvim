@@ -1,8 +1,8 @@
 --- Run the is file before you run unittests to download any extra dependencies.
 
 local _PLUGINS = {
-    ["https://github.com/ColinKennedy/mega.cmdparse"] = os.getenv("MEGA_CMDPARSE_DIR") or "/tmp/mega.cmdparse",
-    ["https://github.com/ColinKennedy/mega.logging"] = os.getenv("MEGA_LOGGING_DIR") or "/tmp/mega.logging",
+    ["https://github.com/h0pes/mega.cmdparse"] = os.getenv("MEGA_CMDPARSE_DIR") or "/tmp/mega.cmdparse",
+    ["https://github.com/h0pes/mega.logging"] = os.getenv("MEGA_LOGGING_DIR") or "/tmp/mega.logging",
 
     ["https://github.com/nvim-lualine/lualine.nvim"] = os.getenv("LUALINE_DIR") or "/tmp/lualine.nvim",
 
@@ -33,8 +33,8 @@ end
 
 vim.opt.rtp:append(".")
 
-vim.cmd("runtime plugin/plugin_template.lua")
+vim.cmd("runtime plugin/screw.lua")
 
 require("lualine").setup()
 
-require("plugin_template._core.configuration").initialize_data_if_needed()
+require("screw._core.configuration").initialize_data_if_needed()

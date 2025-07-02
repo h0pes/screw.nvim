@@ -1,4 +1,4 @@
 This website was generated automatically using
 a fancy Lua -> Markdown -> HTML translator. See
-[nvim-best-practices-plugin-template](https://github.com/ColinKennedy/nvim-best-practice
-s-plugin-template) for details!
+[screw.nvim](https://github.com/h0pes/nvim-best-practice
+s-screw) for details!

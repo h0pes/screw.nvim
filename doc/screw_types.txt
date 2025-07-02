@@ -6,37 +6,37 @@ These types are either required by the Lua API or required for the normal
 operation of this Lua plugin.
 
 ------------------------------------------------------------------------------
-*plugin_template.Configuration*
+*screw.Configuration*
    The user's customizations for this plugin.
 
 Fields ~
-    {commands} |plugin_template.ConfigurationCommands|?
-       Customize the fallback behavior of all `:PluginTemplate` commands.
-    {logging} |plugin_template.LoggingConfiguration|?
+    {commands} |screw.ConfigurationCommands|?
+       Customize the fallback behavior of all `:screw` commands.
+    {logging} |screw.LoggingConfiguration|?
        Control how and which logs print to file / Neovim.
-    {tools} |plugin_template.ConfigurationTools|?
+    {tools} |screw.ConfigurationTools|?
        Optional third-party tool integrations.
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationCommands*
-   Customize the fallback behavior of all `:PluginTemplate` commands.
+*screw.ConfigurationCommands*
+   Customize the fallback behavior of all `:screw` commands.
 
 Fields ~
-    {goodnight_moon} |plugin_template.ConfigurationGoodnightMoon|?
-       The default values when a user calls `:PluginTemplate goodnight-moon`.
-    {hello_world} |plugin_template.ConfigurationHelloWorld|?
-       The default values when a user calls `:PluginTemplate hello-world`.
+    {goodnight_moon} |screw.ConfigurationGoodnightMoon|?
+       The default values when a user calls `:screw goodnight-moon`.
+    {hello_world} |screw.ConfigurationHelloWorld|?
+       The default values when a user calls `:screw hello-world`.
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationGoodnightMoon*
-   The default values when a user calls `:PluginTemplate goodnight-moon`.
+*screw.ConfigurationGoodnightMoon*
+   The default values when a user calls `:screw goodnight-moon`.
 
 Fields ~
-    {read} |plugin_template.ConfigurationGoodnightMoonRead|?
-       The default values when a user calls `:PluginTemplate goodnight-moon read`.
+    {read} |screw.ConfigurationGoodnightMoonRead|?
+       The default values when a user calls `:screw goodnight-moon read`.
 
 ------------------------------------------------------------------------------
-*plugin_template.LoggingConfiguration*
+*screw.LoggingConfiguration*
    Control whether or not logging is printed to the console or to disk.
 
 Fields ~
@@ -62,24 +62,24 @@ Fields ~
        Defaults to "/home/selecaoone/.local/share/nvim/plugin_name.log".
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationGoodnightMoonRead*
-   The default values when a user calls `:PluginTemplate goodnight-moon read`.
+*screw.ConfigurationGoodnightMoonRead*
+   The default values when a user calls `:screw goodnight-moon read`.
 
 Fields ~
     {phrase} `(string)`
        The book to read if no book is given by the user.
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationHelloWorld*
-   The default values when a user calls `:PluginTemplate hello-world`.
+*screw.ConfigurationHelloWorld*
+   The default values when a user calls `:screw hello-world`.
 
 Fields ~
-    {say} |plugin_template.ConfigurationHelloWorldSay|?
-       The default values when a user calls `:PluginTemplate hello-world say`.
+    {say} |screw.ConfigurationHelloWorldSay|?
+       The default values when a user calls `:screw hello-world say`.
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationHelloWorldSay*
-   The default values when a user calls `:PluginTemplate hello-world say`.
+*screw.ConfigurationHelloWorldSay*
+   The default values when a user calls `:screw hello-world say`.
 
 Fields ~
     {repeat} `(number)`
@@ -89,16 +89,16 @@ Fields ~
        Control how the text is displayed. e.g. "uppercase" changes "hello" to "HELLO".
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationTools*
+*screw.ConfigurationTools*
    Optional third-party tool integrations.
 
 Fields ~
-    {lualine} |plugin_template.ConfigurationToolsLualine|?
+    {lualine} |screw.ConfigurationToolsLualine|?
        A Vim statusline replacement that will show the command that the user just ran.
 
 ------------------------------------------------------------------------------
-*plugin_template.ConfigurationToolsLualineData*
-   The display values that will be used when a specific `plugin_template`
+*screw.ConfigurationToolsLualineData*
+   The display values that will be used when a specific `screw`
    command runs.
 
 Fields ~

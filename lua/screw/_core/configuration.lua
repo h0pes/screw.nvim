@@ -1,17 +1,17 @@
---- All functions and data to help customize `plugin_template` for this user.
+--- All functions and data to help customize `screw` for this user.
 
-local say_constant = require("plugin_template._commands.hello_world.say.constant")
+local say_constant = require("screw._commands.hello_world.say.constant")
 
 local logging = require("mega.logging")
 
-local _LOGGER = logging.get_logger("plugin_template._core.configuration")
+local _LOGGER = logging.get_logger("screw._core.configuration")
 
 local M = {}
 
 -- NOTE: Don't remove this line. It makes the Lua module much easier to reload
-vim.g.loaded_plugin_template = false
+vim.g.loaded_screw = false
 
----@type plugin_template.Configuration
+---@type screw.Configuration
 M.DATA = {}
 
 -- TODO: (you) If you use the mega.logging module for built-in logging, keep
@@ -19,7 +19,7 @@ M.DATA = {}
 --
 -- It's recommended to keep the `display` section in any case.
 --
----@type plugin_template.Configuration
+---@type screw.Configuration
 local _DEFAULTS = {
     logging = { level = "info", use_console = false, use_file = false },
 }
@@ -69,27 +69,27 @@ local _EXTRA_DEFAULTS = {
 
 _DEFAULTS = vim.tbl_deep_extend("force", _DEFAULTS, _EXTRA_DEFAULTS)
 
---- Setup `plugin_template` for the first time, if needed.
+--- Setup `screw` for the first time, if needed.
 function M.initialize_data_if_needed()
-    if vim.g.loaded_plugin_template then
+    if vim.g.loaded_screw then
         return
     end
 
-    M.DATA = vim.tbl_deep_extend("force", _DEFAULTS, vim.g.plugin_template_configuration or {})
+    M.DATA = vim.tbl_deep_extend("force", _DEFAULTS, vim.g.screw_configuration or {})
 
-    vim.g.loaded_plugin_template = true
+    vim.g.loaded_screw = true
 
     local configuration = M.DATA.logging or {}
     ---@cast configuration mega.logging.SparseLoggerOptions
-    logging.set_configuration("plugin_template", configuration)
+    logging.set_configuration("screw", configuration)
 
-    _LOGGER:fmt_debug("Initialized plugin-template's configuration.")
+    _LOGGER:fmt_debug("Initialized screw's configuration.")
 end
 
 --- Merge `data` with the user's current configuration.
 ---
----@param data plugin_template.Configuration? All extra customizations for this plugin.
----@return plugin_template.Configuration # The configuration with 100% filled out values.
+---@param data screw.Configuration? All extra customizations for this plugin.
+---@return screw.Configuration # The configuration with 100% filled out values.
 ---
 function M.resolve_data(data)
     M.initialize_data_if_needed()
