@@ -1,455 +1,477 @@
---- Make sure `screw` will work as expected.
+--- Health check for screw.nvim
 ---
---- At minimum, we validate that the user's configuration is correct. But other
---- checks can happen here if needed.
+--- This module provides comprehensive health checks for troubleshooting
+--- following Neovim plugin best practices.
 ---
-
-local configuration_ = require("screw._core.configuration")
-local logging_ = require("mega.logging")
-local say_constant = require("screw._commands.hello_world.say.constant")
-local tabler = require("screw._core.tabler")
-local texter = require("screw._core.texter")
-
-local _LOGGER = logging_.get_logger("screw.health")
 
 local M = {}
 
--- NOTE: This file is defer-loaded so it's okay to run this in the global scope
-configuration_.initialize_data_if_needed()
-
----@class lualine.ColorHex
----    The table that Lualine expects when it sets colors.
----@field bg string
----    The background hex color. e.g. `"#444444"`.
----@field fg string
----    The text hex color. e.g. `"#DD0000"`.
----@field gui string
----    The background hex color. e.g. `"#444444"`.
-
---- Check if `value` has keys that it should not.
----
----@param value lualine.ColorHex
----
-local function _has_extra_color_keys(value)
-    local keys = { "bg", "fg", "gui" }
-
-    for key, _ in pairs(value) do
-        if not vim.tbl_contains(keys, key) then
-            return true
-        end
-    end
-
+--- Check Neovim version compatibility
+local function check_neovim_version()
+  vim.health.start("Neovim Environment")
+  
+  local version = vim.version()
+  local version_string = string.format("%d.%d.%d", version.major, version.minor, version.patch)
+  
+  if vim.fn.has("nvim-0.9.0") == 1 then
+    vim.health.ok("Neovim version: " .. version_string .. " (>= 0.9.0 required)")
+  else
+    vim.health.error("Neovim version: " .. version_string .. " - Please upgrade to Neovim 0.9.0 or later")
     return false
+  end
+  
+  -- Check for important Neovim features
+  local features = {
+    { "lua", "Lua support" },
+    { "autocmd", "Autocommand support" },
+    { "cmdline_hist", "Command history" },
+    { "float", "Floating windows" },
+    { "timers", "Timer support" },
+  }
+  
+  for _, feature in ipairs(features) do
+    local name, desc = feature[1], feature[2]
+    if vim.fn.has(name) == 1 then
+      vim.health.ok(desc .. " available")
+    else
+      vim.health.warn(desc .. " not available - some features may not work")
+    end
+  end
+  
+  return true
 end
 
---- Make sure `text` is a HEX code. e.g. `"#D0FF1A"`.
----
----@param text string An expected HEX code.
----@return boolean # If `text` matches, return `true`.
----
-local function _is_hex_color(text)
-    if type(text) ~= "string" then
-        return false
-    end
-
-    return text:match("^#%x%x%x%x%x%x$") ~= nil
-end
-
---- Add issues to `array` if there are errors.
----
---- Todo:
----     Once Neovim 0.10 is dropped, use the new function signature
----     for vim.validate to make this function cleaner.
----
----@param array string[]
----    All of the cumulated errors, if any.
----@param name string
----    The key to check for.
----@param value_creator fun(): any
----    A function that generates the value.
----@param expected string | fun(value: any): boolean
----    If `value_creator()` does not match `expected`, this error message is
----    shown to the user.
----@param message (string | boolean)?
----    If it's a string, it's the error message when
----    `value_creator()` does not match `expected`. When it's
----    `true`, it means it's okay for `value_creator()` not to match `expected`.
----
-local function _append_validated(array, name, value_creator, expected, message)
-    local success, value = pcall(value_creator)
-
-    if not success then
-        table.insert(array, value)
-
-        return
-    end
-
-    local validated
-    success, validated = pcall(vim.validate, {
-        -- TODO: I think the Neovim type annotation is wrong. Once Neovim
-        -- 0.10 is dropped let's just change this over to the new
-        -- vim.validate signature.
-        --
-        ---@diagnostic disable-next-line: assign-type-mismatch
-        [name] = { value, expected, message },
-    })
-
-    if not success then
-        table.insert(array, validated)
-    end
-end
-
---- Check if `data` is a boolean under `key`.
----
----@param key string The configuration value that we are checking.
----@param data any The object to validate.
----@return string? # The found error message, if any.
----
-local function _get_boolean_issue(key, data)
-    local success, message = pcall(vim.validate, {
-        [key] = {
-            data,
-            function(value)
-                if value == nil then
-                    -- NOTE: This value is optional so it's fine it if is not defined.
-                    return true
-                end
-
-                return type(value) == "boolean"
-            end,
-            -- TODO: I think the Neovim type annotation is wrong. Once Neovim
-            -- 0.10 is dropped let's just change this over to the new
-            -- vim.validate signature.
-            --
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            "a boolean",
-        },
-    })
-
+--- Check plugin loading and initialization
+local function check_plugin_loading()
+  vim.health.start("Plugin Loading")
+  
+  -- Check if main plugin loads
+  local has_screw, screw_result = pcall(require, "screw")
+  if not has_screw then
+    vim.health.error("Failed to load main plugin module: " .. tostring(screw_result))
+    return false
+  end
+  vim.health.ok("Main plugin module loaded successfully")
+  
+  -- Check core modules
+  local core_modules = {
+    { "screw.config", "Configuration management" },
+    { "screw.utils", "Utility functions" },
+    { "screw.types", "Type definitions" },
+    { "screw.events", "Event system" },
+  }
+  
+  for _, module_info in ipairs(core_modules) do
+    local module_name, description = module_info[1], module_info[2]
+    local success, result = pcall(require, module_name)
     if success then
-        return nil
+      vim.health.ok(description .. " module loaded")
+    else
+      vim.health.error(description .. " module failed to load: " .. tostring(result))
     end
-
-    return message
+  end
+  
+  return true
 end
 
---- Check all "commands" values for issues.
----
----@param data screw.Configuration All of the user's fallback settings.
----@return string[] # All found issues, if any.
----
-local function _get_command_issues(data)
-    local output = {}
-
-    _append_validated(output, "commands.goodnight_moon.read.phrase", function()
-        return tabler.get_value(data, { "commands", "goodnight_moon", "read", "phrase" })
-    end, "string")
-
-    _append_validated(output, "commands.hello_world.say.repeat", function()
-        return tabler.get_value(data, { "commands", "hello_world", "say", "repeat" })
-    end, function(value)
-        return type(value) == "number" and value > 0
-    end, "a number (value must be 1-or-more)")
-
-    _append_validated(output, "commands.hello_world.say.style", function()
-        return tabler.get_value(data, { "commands", "hello_world", "say", "style" })
-    end, function(value)
-        local choices = vim.tbl_keys(say_constant.Keyword.style)
-
-        return vim.tbl_contains(choices, value)
-    end, '"lowercase" or "uppercase"')
-
-    return output
+--- Check user configuration
+local function check_user_configuration()
+  vim.health.start("User Configuration")
+  
+  -- Check configuration loading
+  local has_config, config = pcall(require, "screw.config")
+  if not has_config then
+    vim.health.error("Configuration module failed to load: " .. tostring(config))
+    return false
+  end
+  
+  -- Check if user has provided configuration
+  if config.is_configured() then
+    vim.health.info("Custom user configuration detected")
+    
+    -- Validate user configuration
+    local success, error_msg = pcall(function()
+      local internal_config = require("screw.config.internal")
+      internal_config.create_config()
+    end)
+    
+    if success then
+      vim.health.ok("User configuration is valid")
+    else
+      vim.health.error("User configuration validation failed: " .. tostring(error_msg))
+      return false
+    end
+  else
+    vim.health.info("Using default configuration (no custom config found)")
+  end
+  
+  -- Check specific configuration sections
+  local success, current_config = pcall(config.get)
+  if success then
+    vim.health.ok("Configuration accessible")
+    
+    -- Validate configuration structure
+    local required_sections = { "storage", "ui", "collaboration", "export", "import", "signs" }
+    for _, section in ipairs(required_sections) do
+      if current_config[section] then
+        vim.health.ok("Configuration section '" .. section .. "' present")
+      else
+        vim.health.error("Configuration section '" .. section .. "' missing")
+      end
+    end
+  else
+    vim.health.error("Cannot access current configuration: " .. tostring(current_config))
+    return false
+  end
+  
+  return true
 end
 
---- Check the contents of the "tools.lualine" configuration for any issues.
----
---- Issues include:
---- - Defining tools.lualine but it's not a table
---- - Or the table, which is `table<str, table<...>>`, has an incorrect value.
---- - The inner tables must also follow a specific structure.
----
----@param command string A supported `screw` command. e.g. `"hello_world"`.
----@return string[] # All found issues, if any.
----
-local function _get_lualine_command_issues(command, data)
-    local output = {}
-
-    _append_validated(output, string.format("tools.lualine.%s", command), function()
-        return data
-    end, function(value)
-        if type(value) ~= "table" then
-            return false
-        end
-
-        return true
-    end, 'a table. e.g. { text="some text here" }')
-
-    if not vim.tbl_isempty(output) then
-        return output
+--- Check Lua dependencies and built-in modules
+local function check_lua_dependencies()
+  vim.health.start("Lua Dependencies")
+  
+  -- Check required Lua built-in modules
+  local lua_modules = {
+    { "os", "Operating system interface" },
+    { "io", "Input/output operations" },
+    { "string", "String manipulation" },
+    { "table", "Table operations" },
+    { "math", "Mathematical functions" },
+    { "json", "JSON support (vim.json)", vim.json },
+  }
+  
+  for _, module_info in ipairs(lua_modules) do
+    local module_name, description, check_fn = module_info[1], module_info[2], module_info[3]
+    
+    if check_fn then
+      if check_fn and check_fn.encode and check_fn.decode then
+        vim.health.ok(description .. " available")
+      else
+        vim.health.error(description .. " not available or incomplete")
+      end
+    else
+      local success = pcall(function() return _G[module_name] end)
+      if success and _G[module_name] then
+        vim.health.ok(description .. " available")
+      else
+        vim.health.error(description .. " not available")
+      end
     end
+  end
+  
+  -- Check Neovim-specific Lua modules
+  local nvim_modules = {
+    { "vim.fn", "Vim function interface" },
+    { "vim.api", "Neovim API" },
+    { "vim.loop", "Event loop interface" },
+    { "vim.validate", "Validation functions" },
+    { "vim.health", "Health check system" },
+    { "vim.keymap", "Keymap functions" },
+  }
+  
+  for _, module_info in ipairs(nvim_modules) do
+    local module_path, description = module_info[1], module_info[2]
+    local parts = vim.split(module_path, ".", { plain = true })
+    local obj = vim
+    local available = true
+    
+    for _, part in ipairs(parts) do
+      if obj and obj[part] then
+        obj = obj[part]
+      else
+        available = false
+        break
+      end
+    end
+    
+    if available then
+      vim.health.ok(description .. " available")
+    else
+      vim.health.error(description .. " not available")
+    end
+  end
+  
+  return true
+end
 
-    _append_validated(output, string.format("tools.lualine.%s.text", command), function()
-        return tabler.get_value(data, { "text" })
-    end, function(value)
-        if type(value) ~= "string" then
-            return false
-        end
+--- Check external dependencies
+local function check_external_dependencies()
+  vim.health.start("External Dependencies")
+  
+  -- Check optional external tools
+  local external_tools = {
+    { "rg", "ripgrep (for enhanced search)", false },
+    { "fd", "fd (for fast file finding)", false },
+    { "git", "Git (for project detection)", false },
+  }
+  
+  for _, tool_info in ipairs(external_tools) do
+    local tool, description, required = tool_info[1], tool_info[2], tool_info[3]
+    
+    if vim.fn.executable(tool) == 1 then
+      vim.health.ok(description .. " found: " .. vim.fn.exepath(tool))
+    else
+      if required then
+        vim.health.error(description .. " not found (required)")
+      else
+        vim.health.info(description .. " not found (optional)")
+      end
+    end
+  end
+  
+  -- Check collaboration dependencies
+  local config = require("screw.config")
+  local collab_config = config.get_option("collaboration")
+  
+  if collab_config.enabled then
+    vim.health.info("Collaboration mode is enabled")
+    
+    if collab_config.database_url and collab_config.database_url ~= "" then
+      vim.health.ok("Database URL configured: " .. collab_config.database_url)
+      
+      -- Test database connectivity (basic check)
+      if collab_config.database_url:match("^rethinkdb://") then
+        vim.health.info("RethinkDB URL format detected")
+      else
+        vim.health.warn("Unrecognized database URL format")
+      end
+    else
+      vim.health.error("Collaboration enabled but no database URL configured")
+    end
+  else
+    vim.health.info("Collaboration mode is disabled")
+  end
+  
+  return true
+end
 
-        return true
-    end, 'a string. e.g. "some text here"')
-
-    _append_validated(output, string.format("tools.lualine.%s.color", command), function()
-        return tabler.get_value(data, { "color" })
-    end, function(value)
-        if value == nil then
-            -- NOTE: It's okay for this value to be undefined because
-            -- we define a fallback for the user.
-            --
-            return true
-        end
-
-        local type_ = type(value)
-
-        if type_ == "string" then
-            -- NOTE: We assume that there is a linkable highlight group
-            -- with the name of `value` already or one that will exist.
-            --
-            return true
-        end
-
-        if type_ == "table" then
-            if value.bg ~= nil and not _is_hex_color(value.bg) then
-                return false
-            end
-
-            if value.fg ~= nil and not _is_hex_color(value.fg) then
-                return false
-            end
-
-            if value.gui ~= nil and type(value.gui) ~= "string" then
-                return false
-            end
-
-            if _has_extra_color_keys(value) then
-                return false
-            end
-
-            return true
-        end
-
+--- Check storage functionality
+local function check_storage()
+  vim.health.start("Storage System")
+  
+  local config = require("screw.config")
+  local storage_config = config.get_option("storage")
+  
+  -- Check storage backend
+  vim.health.info("Storage backend: " .. storage_config.backend)
+  
+  -- Check storage path
+  local storage_path = storage_config.path
+  if storage_path and storage_path ~= "" then
+    vim.health.info("Storage path: " .. storage_path)
+    
+    -- Check if directory exists or can be created
+    if vim.fn.isdirectory(storage_path) == 1 then
+      vim.health.ok("Storage directory exists")
+    else
+      -- Try to create the directory
+      local utils = require("screw.utils")
+      utils.ensure_dir(storage_path)
+      
+      if vim.fn.isdirectory(storage_path) == 1 then
+        vim.health.ok("Storage directory created successfully")
+      else
+        vim.health.error("Cannot create storage directory: " .. storage_path)
         return false
-    end, 'a table. e.g. {fg="#000000", bg="#FFFFFF", gui="effect"}')
-
-    return output
+      end
+    end
+    
+    -- Check write permissions
+    local test_file = storage_path .. "/.screw_health_test"
+    local utils = require("screw.utils")
+    
+    if utils.write_file(test_file, "health test") then
+      vim.health.ok("Write permissions verified")
+      os.remove(test_file)
+    else
+      vim.health.error("No write permissions for storage directory")
+      return false
+    end
+    
+    -- Check existing storage file
+    local storage_file = storage_path .. "/notes.json"
+    if utils.file_exists(storage_file) then
+      vim.health.info("Existing notes file found")
+      
+      -- Validate storage file
+      local content = utils.read_file(storage_file)
+      if content then
+        local success, data = pcall(vim.json.decode, content)
+        if success then
+          vim.health.ok("Storage file is valid JSON")
+          if data and data.notes then
+            vim.health.info("Found " .. #data.notes .. " notes in storage")
+          end
+        else
+          vim.health.error("Storage file contains invalid JSON")
+        end
+      else
+        vim.health.error("Cannot read storage file")
+      end
+    else
+      vim.health.info("No existing notes file (will be created on first save)")
+    end
+  else
+    vim.health.error("Storage path not configured")
+    return false
+  end
+  
+  -- Test storage backend loading
+  local has_storage, storage = pcall(require, "screw.notes.storage")
+  if has_storage then
+    vim.health.ok("Storage backend module loaded")
+    
+    -- Test storage backend initialization
+    local success, result = pcall(function()
+      return storage.get_storage_stats()
+    end)
+    
+    if success and result then
+      vim.health.ok("Storage backend functional")
+      vim.health.info("Storage stats: " .. vim.inspect(result))
+    else
+      vim.health.warn("Storage backend may not be fully initialized")
+    end
+  else
+    vim.health.error("Storage backend module failed to load: " .. tostring(storage))
+    return false
+  end
+  
+  return true
 end
 
---- Check all "tools.lualine" values for issues.
----
----@param data screw.Configuration All of the user's fallback settings.
----@return string[] # All found issues, if any.
----
-local function _get_lualine_issues(data)
-    local output = {}
-
-    local lualine = tabler.get_value(data, { "tools", "lualine" })
-
-    _append_validated(output, "tools.lualine", function()
-        return lualine
-    end, function(value)
-        if type(value) ~= "table" then
-            return false
-        end
-
-        return true
-    end, "a table. e.g. { goodnight_moon = {...}, hello_world = {...} }")
-
-    if not vim.tbl_isempty(output) then
-        return output
+--- Check plugin functionality
+local function check_functionality()
+  vim.health.start("Plugin Functionality")
+  
+  -- Check core modules
+  local modules = {
+    { "screw.notes.manager", "Notes management" },
+    { "screw.notes.ui", "User interface" },
+    { "screw.export.init", "Export functionality" },
+    { "screw.import.init", "Import functionality" },
+    { "screw.collaboration.init", "Collaboration features" },
+    { "screw.signs", "Sign column indicators" },
+  }
+  
+  for _, module_info in ipairs(modules) do
+    local module_name, description = module_info[1], module_info[2]
+    local success, result = pcall(require, module_name)
+    if success then
+      vim.health.ok(description .. " module available")
+    else
+      vim.health.error(description .. " module failed to load: " .. tostring(result))
     end
-
-    for _, command in ipairs({ "arbitrary_thing", "goodnight_moon", "hello_world" }) do
-        local value = tabler.get_value(lualine, { command })
-
-        -- NOTE: We have fallback values so it's okay if the value is nil.
-        if value ~= nil then
-            local issues = _get_lualine_command_issues(command, value)
-
-            vim.list_extend(output, issues)
-        end
+  end
+  
+  -- Test basic plugin operations
+  local screw = require("screw")
+  
+  -- Test configuration access
+  local success, config = pcall(screw.get_config)
+  if success then
+    vim.health.ok("Configuration access functional")
+  else
+    vim.health.error("Cannot access plugin configuration: " .. tostring(config))
+  end
+  
+  -- Test statistics
+  local success, stats = pcall(screw.get_statistics)
+  if success then
+    vim.health.ok("Statistics generation functional")
+    if stats then
+      vim.health.info("Current statistics: " .. vim.inspect(stats))
     end
-
-    return output
+  else
+    vim.health.warn("Statistics generation failed: " .. tostring(stats))
+  end
+  
+  return true
 end
 
---- Check if logging configuration `data` has any issues.
----
----@param data screw.LoggingConfiguration The user's logger settings.
----@return string[] # All of the found issues, if any.
----
-local function _get_logging_issues(data)
-    local output = {}
-
-    _append_validated(output, "logging", function()
-        return data
-    end, function(value)
-        if type(value) ~= "table" then
-            return false
-        end
-
-        return true
-    end, 'a table. e.g. { level = "info", ... }')
-
-    if not vim.tbl_isempty(output) then
-        return output
+--- Check for potential issues
+local function check_potential_issues()
+  vim.health.start("Potential Issues")
+  
+  -- Check for conflicting plugins
+  local conflicting_plugins = {
+    { "nvim-comment", "Comment plugin conflict" },
+    { "comment.nvim", "Comment plugin conflict" },
+    { "nerdcommenter", "Comment plugin conflict" },
+    { "vim-commentary", "Commentary plugin conflict" },
+  }
+  
+  local conflicts_found = false
+  for _, plugin_info in ipairs(conflicting_plugins) do
+    local plugin, description = plugin_info[1], plugin_info[2]
+    if pcall(require, plugin) then
+      vim.health.warn(description .. " detected: " .. plugin)
+      conflicts_found = true
     end
-
-    _append_validated(output, "logging.level", function()
-        return data.level
-    end, function(value)
-        if type(value) ~= "string" then
-            return false
-        end
-
-        if not vim.tbl_contains({ "trace", "debug", "info", "warn", "error", "fatal" }, value) then
-            return false
-        end
-
-        return true
-    end, 'an enum. e.g. "trace" | "debug" | "info" | "warn" | "error" | "fatal"')
-
-    local message = _get_boolean_issue("logging.use_console", data.use_console)
-
-    if message ~= nil then
-        table.insert(output, message)
+  end
+  
+  if not conflicts_found then
+    vim.health.ok("No conflicting plugins detected")
+  end
+  
+  -- Check performance considerations
+  local screw = require("screw")
+  local success, notes = pcall(screw.get_notes)
+  if success and notes then
+    local note_count = #notes
+    
+    if note_count == 0 then
+      vim.health.info("No notes found - performance should be optimal")
+    elseif note_count < 100 then
+      vim.health.ok("Note count (" .. note_count .. ") is within optimal range")
+    elseif note_count < 1000 then
+      vim.health.info("Note count (" .. note_count .. ") may impact performance on older systems")
+    else
+      vim.health.warn("High note count (" .. note_count .. ") may significantly impact performance")
+      vim.health.info("Consider archiving old notes or optimizing storage")
     end
-
-    message = _get_boolean_issue("logging.use_file", data.use_file)
-
-    if message ~= nil then
-        table.insert(output, message)
-    end
-
-    return output
+  end
+  
+  -- Check startup performance
+  vim.health.info("Plugin follows lazy loading best practices for optimal startup performance")
+  
+  return true
 end
 
---- Check all "tools.lualine" values for issues.
----
----@param data screw.Configuration All of the user's fallback settings.
----@return string[] # All found issues, if any.
----
-local function _get_telescope_issues(data)
-    local output = {}
-
-    local telescope = tabler.get_value(data, { "tools", "telescope" })
-
-    _append_validated(output, "tools.telescope", function()
-        return telescope
-    end, function(value)
-        if type(value) ~= "table" then
-            return false
-        end
-
-        return true
-    end, "a table. e.g. { goodnight_moon = {...}, hello_world = {...}}")
-
-    if not vim.tbl_isempty(output) then
-        return output
+--- Main health check function
+function M.check()
+  -- Run all health checks in sequence
+  local checks = {
+    check_neovim_version,
+    check_plugin_loading,
+    check_user_configuration,
+    check_lua_dependencies,
+    check_external_dependencies,
+    check_storage,
+    check_functionality,
+    check_potential_issues,
+  }
+  
+  local all_passed = true
+  for _, check_fn in ipairs(checks) do
+    local success, result = pcall(check_fn)
+    if not success then
+      vim.health.error("Health check failed: " .. tostring(result))
+      all_passed = false
+    elseif result == false then
+      all_passed = false
     end
-
-    _append_validated(output, "tools.telescope.goodnight_moon", function()
-        return telescope.goodnight_moon
-    end, function(value)
-        if value == nil then
-            return true
-        end
-
-        if type(value) ~= "table" then
-            return false
-        end
-
-        for _, item in ipairs(value) do
-            if not texter.is_string_list(item) then
-                return false
-            end
-
-            if #item ~= 2 then
-                return false
-            end
-        end
-
-        return true
-    end, 'a table. e.g. { {"Book", "Author"} }')
-
-    _append_validated(output, "tools.telescope.hello_world", function()
-        return telescope.hello_world
-    end, function(value)
-        if value == nil then
-            return true
-        end
-
-        if type(value) ~= "table" then
-            return false
-        end
-
-        return texter.is_string_list(value)
-    end, 'a table. e.g. { "Hello", "Hi", ...} }')
-
-    return output
-end
-
---- Check `data` for problems and return each of them.
----
----@param data screw.Configuration? All extra customizations for this plugin.
----@return string[] # All found issues, if any.
----
-function M.get_issues(data)
-    if not data or vim.tbl_isempty(data) then
-        data = configuration_.resolve_data(vim.g.screw_configuration)
-    end
-
-    local output = {}
-    vim.list_extend(output, _get_command_issues(data))
-
-    local logging = data.logging
-
-    if logging ~= nil then
-        vim.list_extend(output, _get_logging_issues(data.logging))
-    end
-
-    local lualine = tabler.get_value(data, { "tools", "lualine" })
-
-    if lualine ~= nil then
-        vim.list_extend(output, _get_lualine_issues(data))
-    end
-
-    local telescope = tabler.get_value(data, { "tools", "telescope" })
-
-    if telescope ~= nil then
-        vim.list_extend(output, _get_telescope_issues(data))
-    end
-
-    return output
-end
-
---- Make sure `data` will work for `screw`.
----
----@param data screw.Configuration? All extra customizations for this plugin.
----
-function M.check(data)
-    _LOGGER:debug("Running screw health check.")
-
-    vim.health.start("Configuration")
-
-    local issues = M.get_issues(data)
-
-    if vim.tbl_isempty(issues) then
-        vim.health.ok("Your vim.g.screw_configuration variable is great!")
-    end
-
-    for _, issue in ipairs(issues) do
-        vim.health.error(issue)
-    end
+  end
+  
+  -- Final summary
+  vim.health.start("Health Check Summary")
+  if all_passed then
+    vim.health.ok("All health checks passed - screw.nvim is ready to use")
+  else
+    vim.health.error("Some health checks failed - please review the issues above")
+    vim.health.info("For help, see: https://github.com/h0pes/screw.nvim/blob/main/doc/troubleshooting.md")
+  end
 end
 
 return M

@@ -1,0 +1,86 @@
+name: Documentation
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+      - 'lua/**'
+      - 'doc/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'README.md'
+      - 'lua/**'
+      - 'doc/**'
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Neovim
+        uses: rhymond/setup-neovim@v1
+        with:
+          neovim-version: stable
+      
+      - name: Setup Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "5.1"
+      
+      - name: Setup LuaRocks
+        uses: leafo/gh-actions-luarocks@v4
+      
+      - name: Install dependencies
+        run: |
+          luarocks install ldoc
+          git clone https://github.com/kdheepak/panvimdoc.git
+          cd panvimdoc
+          luarocks make
+          cd ..
+      
+      - name: Generate vim documentation
+        run: |
+          panvimdoc \
+            --project-name screw.nvim \
+            --input-file README.md \
+            --vim-version "0.9.0" \
+            --toc true \
+            --description "Security code review plugin for Neovim" \
+            --title "screw.nvim" \
+            --treesitter true
+      
+      - name: Generate API documentation
+        run: |
+          # Install mini.doc if it doesn't exist
+          if [ ! -d "mini.doc" ]; then
+            git clone https://github.com/echasnovski/mini.doc.git
+          fi
+          
+          # Generate API docs
+          nvim --headless --clean -c "
+            lua package.path = package.path .. ';./mini.doc/lua/?.lua'
+            lua local minidoc = require('mini.doc')
+            lua minidoc.generate({
+              'lua/screw/init.lua',
+              'lua/screw/notes/manager.lua',
+              'lua/screw/export/init.lua',
+              'lua/screw/import/init.lua',
+              'lua/screw/config.lua',
+              'lua/screw/utils.lua'
+            }, 'doc/api.md')
+            lua vim.cmd('quit')
+          "
+      
+      - name: Commit documentation
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add doc/
+          git diff --staged --quiet || git commit -m "docs: auto-generated documentation [skip ci]"
+          git push

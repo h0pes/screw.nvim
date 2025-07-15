@@ -1,0 +1,35 @@
+return {
+  -- filename to store stats collected
+  statsfile = "luacov.stats.out",
+  
+  -- filename to store report
+  reportfile = "luacov.report.out",
+  
+  -- Run reporter on completion? (won't work for ticks)
+  runreport = false,
+  
+  -- Delete stats file after reporting?
+  deletestats = false,
+  
+  -- Patterns for files to include when reporting
+  -- all will be included if nothing is listed
+  include = {
+    "lua/screw",
+  },
+  
+  -- Patterns for files to exclude when reporting
+  exclude = {
+    "lua/screw/config/",
+    "spec/",
+  },
+  
+  -- configuration for luacov-html reporter
+  html = {
+    -- output directory for html files
+    outdir = "coverage",
+    -- show hit/miss lines
+    showlines = true,
+    -- show line numbers
+    linenumbers = true,
+  },
+}

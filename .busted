@@ -1,0 +1,17 @@
+return {
+  default = {
+    ROOT = {"."},
+    ["exclude-tags"] = {"slow"},
+    verbose = true,
+    coverage = false,  -- Disable coverage for now
+    ["coverage-config"] = ".luacov",
+    lpath = "./lua/?.lua;./lua/?/init.lua"
+  },
+  slow = {
+    ROOT = {"."},
+    verbose = true,
+    coverage = false,  -- Disable coverage for now
+    ["coverage-config"] = ".luacov",
+    lpath = "./lua/?.lua;./lua/?/init.lua"
+  }
+}

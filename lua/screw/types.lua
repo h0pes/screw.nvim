@@ -1,84 +1,62 @@
---- A collection of types to be included / used in other Lua files.
+--- Type definitions for screw.nvim - Security Code Review Plugin
 ---
---- These types are either required by the Lua API or required for the normal
---- operation of this Lua plugin.
+--- This file contains all the type definitions used throughout the plugin
+--- for security note management, configuration, and collaboration features.
 ---
 
----@class screw.Configuration
----    The user's customizations for this plugin.
----@field commands screw.ConfigurationCommands?
----    Customize the fallback behavior of all `:screw` commands.
----@field logging screw.LoggingConfiguration?
----    Control how and which logs print to file / Neovim.
----@field tools screw.ConfigurationTools?
----    Optional third-party tool integrations.
+---@class ScrewNote
+---@field id string Unique identifier for the note
+---@field file_path string Relative path to the file from project root
+---@field line_number integer Line number in the file (1-based)
+---@field author string Author of the note
+---@field timestamp string ISO 8601 timestamp when note was created (e.g., "2024-01-01T12:00:00Z")
+---@field updated_at string? ISO 8601 timestamp when note was last updated
+---@field comment string Main comment text
+---@field description string? Optional detailed description
+---@field cwe string? CWE identifier (e.g., "CWE-79", "CWE-89")
+---@field state "vulnerable"|"not_vulnerable"|"todo" Vulnerability assessment state
+---@field severity "high"|"medium"|"low"|"info"? Severity level (mandatory if state is "vulnerable", optional otherwise)
+---@field replies ScrewReply[]? Array of reply messages
 
----@class screw.ConfigurationCommands
----    Customize the fallback behavior of all `:screw` commands.
----@field goodnight_moon screw.ConfigurationGoodnightMoon?
----    The default values when a user calls `:screw goodnight-moon`.
----@field hello_world screw.ConfigurationHelloWorld?
----    The default values when a user calls `:screw hello-world`.
+---@class ScrewReply
+---@field id string Unique identifier for the reply
+---@field parent_id string ID of the parent note
+---@field author string Author of the reply
+---@field timestamp string ISO 8601 timestamp
+---@field comment string Reply comment text
 
----@class screw.ConfigurationGoodnightMoon
----    The default values when a user calls `:screw goodnight-moon`.
----@field read screw.ConfigurationGoodnightMoonRead?
----    The default values when a user calls `:screw goodnight-moon read`.
+-- Configuration types are now defined in screw.config.meta
+-- This maintains backward compatibility while using the new system
 
----@class screw.LoggingConfiguration
----    Control whether or not logging is printed to the console or to disk.
----@field level (
----    | "trace"
----    | "debug"
----    | "info"
----    | "warn" | "error"
----    | "fatal"
----    | vim.log.levels.DEBUG
----    | vim.log.levels.ERROR
----    | vim.log.levels.INFO
----    | vim.log.levels.TRACE
----    | vim.log.levels.WARN)?
----    Any messages above this level will be logged.
----@field use_console boolean?
----    Should print the output to neovim while running. Warning: This is very
----    spammy. You probably don't want to enable this unless you have to.
----@field use_file boolean?
----    Should write to a file.
----@field output_path string?
----    The default path on-disk where log files will be written to.
----    Defaults to "/home/selecaoone/.local/share/nvim/plugin_name.log".
+---@class ScrewNoteFilter
+---@field author string? Filter by author
+---@field state "vulnerable"|"not_vulnerable"|"todo"? Filter by state
+---@field severity "high"|"medium"|"low"|"info"? Filter by severity
+---@field cwe string? Filter by CWE
+---@field file_path string? Filter by file path pattern
 
----@class screw.ConfigurationGoodnightMoonRead
----    The default values when a user calls `:screw goodnight-moon read`.
----@field phrase string
----    The book to read if no book is given by the user.
+---@class ScrewExportOptions
+---@field format "markdown"|"json"|"csv"|"sarif" Export format
+---@field output_path string? Output file path
+---@field filter ScrewNoteFilter? Filter criteria
+---@field include_replies boolean? Include reply threads (default: true)
 
----@class screw.ConfigurationHelloWorld
----    The default values when a user calls `:screw hello-world`.
----@field say screw.ConfigurationHelloWorldSay?
----    The default values when a user calls `:screw hello-world say`.
+---@class ScrewImportOptions
+---@field tool "semgrep"|"bandit"|"gosec"|"sonarqube" SAST tool type
+---@field input_path string Input file path
+---@field author string? Author name for imported notes
+---@field auto_classify boolean? Auto-classify vulnerability state (default: true)
 
----@class screw.ConfigurationHelloWorldSay
----    The default values when a user calls `:screw hello-world say`.
----@field repeat number
----    A 1-or-more value. When 1, the phrase is said once. When 2+, the phrase
----    is repeated that many times.
----@field style "lowercase" | "uppercase"
----    Control how the text is displayed. e.g. "uppercase" changes "hello" to "HELLO".
-
----@class screw.ConfigurationTools
----    Optional third-party tool integrations.
----@field lualine screw.ConfigurationToolsLualine?
----    A Vim statusline replacement that will show the command that the user just ran.
-
----@alias screw.ConfigurationToolsLualine table<string, plugin_template.ConfigurationToolsLualineData>
----    Each runnable command and its display text.
-
----@class screw.ConfigurationToolsLualineData
----    The display values that will be used when a specific `screw`
----    command runs.
----@diagnostic disable-next-line: undefined-doc-name
----@field color vim.api.keyset.highlight?
----    The foreground/background color to use for the Lualine status.
----@field prefix string?
----    The text to display in lualine.
+---@class StorageBackend
+---@field setup fun(): nil Initialize the storage backend
+---@field load_notes fun(): nil Load notes from storage
+---@field save_notes fun(): boolean Save notes to storage
+---@field get_all_notes fun(): ScrewNote[] Get all notes
+---@field get_note fun(id: string): ScrewNote? Get note by ID
+---@field save_note fun(note: ScrewNote): boolean Save a single note
+---@field delete_note fun(id: string): boolean Delete a note
+---@field get_notes_for_file fun(file_path: string): ScrewNote[] Get notes for specific file
+---@field get_notes_for_line fun(file_path: string, line_number: number): ScrewNote[] Get notes for specific line
+---@field clear_notes fun(): nil Clear all notes (for testing)
+---@field force_save fun(): boolean Force save notes
+---@field get_storage_stats fun(): table Get storage statistics
