@@ -132,7 +132,7 @@ function M.execute_hooks(hook_name, data)
   if not hooks then
     return
   end
-  
+
   for _, callback in ipairs(hooks) do
     pcall(callback, data)
   end

@@ -23,7 +23,7 @@ function M.export(notes, options)
     },
     notes = {},
   }
-  
+
   -- Process notes
   for _, note in ipairs(notes) do
     local exported_note = {
@@ -35,20 +35,20 @@ function M.export(notes, options)
       comment = note.comment,
       state = note.state,
     }
-    
+
     -- Add optional fields
     if note.description then
       exported_note.description = note.description
     end
-    
+
     if note.severity then
       exported_note.severity = note.severity
     end
-    
+
     if note.cwe then
       exported_note.cwe = note.cwe
     end
-    
+
     -- Add replies if requested and available
     if options.include_replies ~= false and note.replies and #note.replies > 0 then
       exported_note.replies = {}
@@ -62,19 +62,19 @@ function M.export(notes, options)
         })
       end
     end
-    
+
     table.insert(export_data.notes, exported_note)
   end
-  
+
   -- Calculate statistics
   export_data.statistics = M.calculate_stats(notes)
-  
+
   -- Encode to JSON
   local success, json_str = pcall(vim.json.encode, export_data)
   if not success then
     return nil
   end
-  
+
   return json_str
 end
 
@@ -99,28 +99,28 @@ function M.calculate_stats(notes)
     by_cwe = {},
     by_file = {},
   }
-  
+
   for _, note in ipairs(notes) do
     -- Count by state
     stats.by_state[note.state] = stats.by_state[note.state] + 1
-    
+
     -- Count by severity
     if note.severity then
       stats.by_severity[note.severity] = stats.by_severity[note.severity] + 1
     end
-    
+
     -- Count by author
     stats.by_author[note.author] = (stats.by_author[note.author] or 0) + 1
-    
+
     -- Count by CWE
     if note.cwe then
       stats.by_cwe[note.cwe] = (stats.by_cwe[note.cwe] or 0) + 1
     end
-    
+
     -- Count by file
     stats.by_file[note.file_path] = (stats.by_file[note.file_path] or 0) + 1
   end
-  
+
   return stats
 end
 

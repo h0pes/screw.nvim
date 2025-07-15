@@ -95,21 +95,6 @@ ignore = {
   "631",  -- line too long
   "212",  -- unused argument
   "213",  -- unused loop variable
-  "611",  -- line contains only whitespace
-  "614",  -- trailing whitespace
-  "121",  -- setting read-only global variable
-  "122",  -- setting read-only field
-  "143",  -- accessing undefined variable
-  "113",  -- accessing undefined variable
-  "542",  -- empty if branch
-  "581",  -- negation of a relational operator
-  "542",  -- empty if branch
-  "311",  -- value assigned to variable is unused
-  "312",  -- value assigned to variable is unused
-  "321",  -- variable is never accessed
-  "431",  -- shadowing upvalue
-  "432",  -- shadowing upvalue argument
-  "433",  -- shadowing upvalue loop variable
 }
 
 -- Exclude certain directories

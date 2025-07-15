@@ -17,21 +17,21 @@ local function get_current_buffer_notes()
   if not buffer_info.filepath or buffer_info.filepath == "" then
     return {}
   end
-  
+
   local all_notes = storage.get_all_notes()
   local buffer_notes = {}
-  
+
   for _, note in ipairs(all_notes) do
     if note.file_path == buffer_info.relative_path then
       table.insert(buffer_notes, note)
     end
   end
-  
+
   -- Sort by line number
   table.sort(buffer_notes, function(a, b)
     return a.line_number < b.line_number
   end)
-  
+
   return buffer_notes
 end
 
@@ -43,11 +43,11 @@ local function note_matches_keywords(note, keywords)
   if not keywords or #keywords == 0 then
     return true
   end
-  
+
   -- Get configured keywords for each state
   local signs_config = config.get_option("signs")
   local state_keywords = signs_config.keywords[note.state] or {}
-  
+
   -- Check if any of the specified keywords match this note's state keywords
   for _, keyword in ipairs(keywords) do
     for _, state_keyword in ipairs(state_keywords) do
@@ -56,7 +56,7 @@ local function note_matches_keywords(note, keywords)
       end
     end
   end
-  
+
   return false
 end
 
@@ -65,16 +65,16 @@ end
 function M.jump_next(opts)
   opts = opts or {}
   local keywords = opts.keywords
-  
+
   local notes = get_current_buffer_notes()
   if #notes == 0 then
     utils.info("No security notes found in current buffer")
     return
   end
-  
+
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
   local target_note = nil
-  
+
   -- Find next note after current line
   for _, note in ipairs(notes) do
     if note.line_number > current_line and note_matches_keywords(note, keywords) then
@@ -82,7 +82,7 @@ function M.jump_next(opts)
       break
     end
   end
-  
+
   -- If no note found after current line, wrap to first matching note
   if not target_note then
     for _, note in ipairs(notes) do
@@ -92,12 +92,12 @@ function M.jump_next(opts)
       end
     end
   end
-  
+
   if target_note then
     vim.api.nvim_win_set_cursor(0, { target_note.line_number, 0 })
     -- Center the line in the window
     vim.cmd("normal! zz")
-    
+
     -- Show brief info about the note
     local severity_text = target_note.severity and (" [" .. target_note.severity:upper() .. "]") or ""
     local state_text = target_note.state:gsub("_", " "):upper()
@@ -113,16 +113,16 @@ end
 function M.jump_prev(opts)
   opts = opts or {}
   local keywords = opts.keywords
-  
+
   local notes = get_current_buffer_notes()
   if #notes == 0 then
     utils.info("No security notes found in current buffer")
     return
   end
-  
+
   local current_line = vim.api.nvim_win_get_cursor(0)[1]
   local target_note = nil
-  
+
   -- Find previous note before current line (search backwards)
   for i = #notes, 1, -1 do
     local note = notes[i]
@@ -131,7 +131,7 @@ function M.jump_prev(opts)
       break
     end
   end
-  
+
   -- If no note found before current line, wrap to last matching note
   if not target_note then
     for i = #notes, 1, -1 do
@@ -142,12 +142,12 @@ function M.jump_prev(opts)
       end
     end
   end
-  
+
   if target_note then
     vim.api.nvim_win_set_cursor(0, { target_note.line_number, 0 })
     -- Center the line in the window
     vim.cmd("normal! zz")
-    
+
     -- Show brief info about the note
     local severity_text = target_note.severity and (" [" .. target_note.severity:upper() .. "]") or ""
     local state_text = target_note.state:gsub("_", " "):upper()

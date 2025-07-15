@@ -1,8 +1,8 @@
 --- Make sure configuration health checks succeed or fail where they should.
 
-local configuration_ = require("screw._core.configuration")
+local config = require("screw.config")
 local health = require("screw.health")
-local tabler = require("screw._core.tabler")
+-- local tabler = require("screw._core.tabler")
 
 local mock_vim = require("test_utilities.mock_vim")
 

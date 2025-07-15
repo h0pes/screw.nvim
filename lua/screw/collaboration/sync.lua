@@ -17,14 +17,14 @@ function M.synchronize(database)
   if not database or not database:is_connected() then
     return
   end
-  
+
   -- Get changes from database since last sync
   local changes = database:get_changes()
-  
+
   if #changes > 0 then
     M.apply_changes(changes)
   end
-  
+
   -- Update last sync timestamp
   M.last_sync = utils.get_timestamp()
 end
@@ -35,7 +35,7 @@ end
 function M.apply_changes(changes)
   local storage = require("screw.notes.storage")
   local conflicts = {}
-  
+
   -- Group changes by note ID to detect conflicts
   local changes_by_note = {}
   for _, change in ipairs(changes) do
@@ -47,11 +47,11 @@ function M.apply_changes(changes)
       table.insert(changes_by_note[note_id], change)
     end
   end
-  
+
   -- Process changes for each note
   for note_id, note_changes in pairs(changes_by_note) do
     local conflict = M.detect_conflict(note_id, note_changes)
-    
+
     if conflict then
       table.insert(conflicts, conflict)
     else
@@ -61,7 +61,7 @@ function M.apply_changes(changes)
       end
     end
   end
-  
+
   return conflicts
 end
 
@@ -72,12 +72,12 @@ end
 function M.detect_conflict(note_id, changes)
   local storage = require("screw.notes.storage")
   local local_note = storage.get_note(note_id)
-  
+
   if not local_note then
     -- No local note, no conflict
     return nil
   end
-  
+
   -- Check if there are multiple conflicting changes
   if #changes > 1 then
     return {
@@ -87,14 +87,14 @@ function M.detect_conflict(note_id, changes)
       local_note = local_note,
     }
   end
-  
+
   local change = changes[1]
-  
+
   -- Check timestamp-based conflict
   if change.note and change.note.timestamp and local_note.timestamp then
     local remote_time = os.time(os.date("*t", change.note.timestamp))
     local local_time = os.time(os.date("*t", local_note.timestamp))
-    
+
     -- If local note is newer, there's a conflict
     if local_time > remote_time then
       return {
@@ -105,7 +105,7 @@ function M.detect_conflict(note_id, changes)
       }
     end
   end
-  
+
   return nil
 end
 
@@ -132,11 +132,11 @@ end
 function M.transform_operation(local_op, remote_op)
   -- Basic operational transformation
   -- This is a simplified implementation
-  
+
   if local_op.action == "update" and remote_op.action == "update" then
     -- For updates, merge the changes
     local merged_note = utils.deep_copy(local_op.note)
-    
+
     -- Apply remote changes that don't conflict
     if remote_op.note.comment ~= local_op.note.comment then
       -- Comment conflict - use local version but note the conflict
@@ -145,22 +145,22 @@ function M.transform_operation(local_op, remote_op)
         remote_version = remote_op.note.comment,
       }
     end
-    
+
     if remote_op.note.description and not local_op.note.description then
       merged_note.description = remote_op.note.description
     end
-    
+
     if remote_op.note.cwe and not local_op.note.cwe then
       merged_note.cwe = remote_op.note.cwe
     end
-    
+
     return {
       action = "update",
       note = merged_note,
       timestamp = utils.get_timestamp(),
     }
   end
-  
+
   -- For other cases, return local operation unchanged
   return local_op
 end
@@ -171,7 +171,7 @@ end
 ---@return table Change record
 function M.create_change_record(note, action)
   local collaboration = require("screw.collaboration")
-  
+
   return {
     action = action,
     note = utils.deep_copy(note),

@@ -134,14 +134,14 @@ local function validate_config_structure(config)
     colors = { "vulnerable", "not_vulnerable", "todo" },
     keywords = { "vulnerable", "not_vulnerable", "todo" },
   }
-  
+
   -- Check for unknown keys in main config
   for key in pairs(config) do
     if not allowed_keys[key] and not vim.tbl_contains({ "storage", "ui", "collaboration", "export", "import", "signs" }, key) then
       return false, string.format("Unknown configuration key: '%s'", key)
     end
   end
-  
+
   -- Check nested sections
   if config.ui then
     if config.ui.float_window then
@@ -151,7 +151,7 @@ local function validate_config_structure(config)
         end
       end
     end
-    
+
     if config.ui.highlights then
       for key in pairs(config.ui.highlights) do
         if not vim.tbl_contains(allowed_keys.highlights, key) then
@@ -160,7 +160,7 @@ local function validate_config_structure(config)
       end
     end
   end
-  
+
   -- Check other sections for unknown keys
   for section, keys in pairs(allowed_keys) do
     if config[section] and type(config[section]) == "table" then
@@ -171,7 +171,7 @@ local function validate_config_structure(config)
       end
     end
   end
-  
+
   return true
 end
 
@@ -186,7 +186,7 @@ local function validate_config_values(config)
     { "storage.path", "string", config.storage.path },
     { "storage.filename", "string", config.storage.filename },
     { "storage.auto_save", "boolean", config.storage.auto_save },
-    
+
     -- UI validations
     { "ui", "table", config.ui },
     { "ui.float_window", "table", config.ui.float_window },
@@ -201,23 +201,23 @@ local function validate_config_values(config)
     { "ui.highlights.todo", "string", config.ui.highlights.todo },
     { "ui.highlights.field_title", "string", config.ui.highlights.field_title },
     { "ui.highlights.field_info", "string", config.ui.highlights.field_info },
-    
+
     -- Collaboration validations
     { "collaboration", "table", config.collaboration },
     { "collaboration.enabled", "boolean", config.collaboration.enabled },
     { "collaboration.database_url", "string", config.collaboration.database_url },
     { "collaboration.sync_interval", "number", config.collaboration.sync_interval },
-    
+
     -- Export validations
     { "export", "table", config.export },
     { "export.default_format", function(v) return vim.tbl_contains({ "markdown", "json", "csv" }, v) end, config.export.default_format, "must be 'markdown', 'json', or 'csv'" },
     { "export.output_dir", "string", config.export.output_dir },
-    
+
     -- Import validations
     { "import", "table", config.import },
     { "import.supported_tools", "table", config.import.supported_tools },
     { "import.auto_map_cwe", "boolean", config.import.auto_map_cwe },
-    
+
     -- Signs validations
     { "signs", "table", config.signs },
     { "signs.enabled", "boolean", config.signs.enabled },
@@ -235,10 +235,10 @@ local function validate_config_values(config)
     { "signs.keywords.not_vulnerable", "table", config.signs.keywords.not_vulnerable },
     { "signs.keywords.todo", "table", config.signs.keywords.todo },
   }
-  
+
   for _, validation in ipairs(validations) do
     local name, validator, value, message = validation[1], validation[2], validation[3], validation[4]
-    
+
     if type(validator) == "string" then
       if type(value) ~= validator then
         return false, string.format("Invalid type for '%s': expected %s, got %s", name, validator, type(value))
@@ -260,16 +260,16 @@ local function validate_config_values(config)
       end
     end
   end
-  
+
   -- Additional range validations
   if config.ui.float_window.winblend < 0 or config.ui.float_window.winblend > 100 then
     return false, "ui.float_window.winblend must be between 0 and 100"
   end
-  
+
   if config.collaboration.sync_interval <= 0 then
     return false, "collaboration.sync_interval must be greater than 0"
   end
-  
+
   return true
 end
 
@@ -277,7 +277,7 @@ end
 ---@return screw.Config
 local function get_user_config()
   local user_config = vim.g.screw_nvim
-  
+
   if type(user_config) == "function" then
     local success, result = pcall(user_config)
     if success and type(result) == "table" then
@@ -299,35 +299,35 @@ end
 function M.create_config(override_config)
   -- Get user configuration from vim.g or override
   local user_config = override_config or get_user_config()
-  
+
   -- Validate user configuration structure
   local structure_valid, structure_error = validate_config_structure(user_config)
   if not structure_valid then
     error("Invalid screw.nvim configuration: " .. structure_error)
   end
-  
+
   -- Deep merge with defaults
   local config = vim.tbl_deep_extend("force", default_config, user_config)
-  
+
   -- Set dynamic defaults
   if config.storage.path == "" then
     config.storage.path = utils.get_project_root()
   end
-  
+
   if config.storage.filename == "" then
     config.storage.filename = "" -- Let the storage backend handle filename detection
   end
-  
+
   if config.export.output_dir == "" then
     config.export.output_dir = utils.get_project_root()
   end
-  
+
   -- Validate final configuration
   local values_valid, values_error = validate_config_values(config)
   if not values_valid then
     error("Invalid screw.nvim configuration: " .. values_error)
   end
-  
+
   return config
 end
 

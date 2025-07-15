@@ -13,12 +13,12 @@ local M = {}
 ---@return table Database instance
 function M.new(config)
   local db = {}
-  
+
   db.config = config
   db.connected = false
   db.connection = nil
   db.change_listeners = {}
-  
+
   --- Connect to the database
   ---@return boolean Success status
   function db:connect()
@@ -28,21 +28,21 @@ function M.new(config)
       utils.error("Database URL not configured")
       return false
     end
-    
+
     -- For now, this is a placeholder implementation
     -- Real RethinkDB integration would require additional dependencies
     utils.warn("RethinkDB integration not fully implemented - using mock connection")
-    
+
     -- Mock connection for development
     self.connected = true
     self.connection = {
       url = url,
       mock = true,
     }
-    
+
     return true
   end
-  
+
   --- Disconnect from the database
   function db:disconnect()
     if self.connection then
@@ -51,13 +51,13 @@ function M.new(config)
     end
     self.connected = false
   end
-  
+
   --- Check if connected to database
   ---@return boolean
   function db:is_connected()
     return self.connected
   end
-  
+
   --- Broadcast a note change to other users
   ---@param change table Change data
   ---@return boolean Success status
@@ -65,29 +65,29 @@ function M.new(config)
     if not self.connected then
       return false
     end
-    
+
     -- TODO: Implement actual RethinkDB broadcast
     -- For now, just store the change locally
     if not self.pending_changes then
       self.pending_changes = {}
     end
-    
+
     table.insert(self.pending_changes, change)
     return true
   end
-  
+
   --- Get pending changes from other users
   ---@return table[] Changes
   function db:get_changes()
     if not self.connected then
       return {}
     end
-    
+
     -- TODO: Implement actual RethinkDB change feed
     -- For now, return empty changes
     return {}
   end
-  
+
   --- Store a note in the database
   ---@param note ScrewNote
   ---@return boolean Success status
@@ -95,11 +95,11 @@ function M.new(config)
     if not self.connected then
       return false
     end
-    
+
     -- TODO: Implement actual RethinkDB storage
     return true
   end
-  
+
   --- Retrieve notes from the database
   ---@param filter table? Filter criteria
   ---@return ScrewNote[] Notes
@@ -107,11 +107,11 @@ function M.new(config)
     if not self.connected then
       return {}
     end
-    
+
     -- TODO: Implement actual RethinkDB retrieval
     return {}
   end
-  
+
   --- Delete a note from the database
   ---@param note_id string
   ---@return boolean Success status
@@ -119,27 +119,27 @@ function M.new(config)
     if not self.connected then
       return false
     end
-    
+
     -- TODO: Implement actual RethinkDB deletion
     return true
   end
-  
+
   --- Set up real-time change feeds
   function db:setup_change_feeds()
     if not self.connected then
       return
     end
-    
+
     -- TODO: Implement RethinkDB change feeds
     -- This would listen for changes in real-time and call callbacks
   end
-  
+
   --- Add a change listener
   ---@param callback function
   function db:add_change_listener(callback)
     table.insert(self.change_listeners, callback)
   end
-  
+
   --- Remove a change listener
   ---@param callback function
   function db:remove_change_listener(callback)
@@ -150,7 +150,7 @@ function M.new(config)
       end
     end
   end
-  
+
   --- Notify all change listeners
   ---@param changes table[]
   function db:notify_listeners(changes)
@@ -158,7 +158,7 @@ function M.new(config)
       pcall(callback, changes)
     end
   end
-  
+
   --- Get database statistics
   ---@return table
   function db:get_stats()
@@ -170,7 +170,7 @@ function M.new(config)
       mock_mode = self.connection and self.connection.mock or false,
     }
   end
-  
+
   return db
 end
 
@@ -182,7 +182,7 @@ function M.create_schema(connection)
   local schema = {
     tables = {
       "notes",
-      "changes", 
+      "changes",
       "user_presence",
       "projects",
     },
@@ -192,7 +192,7 @@ function M.create_schema(connection)
       user_presence = { "user_id", "last_seen" },
     }
   }
-  
+
   return schema
 end
 

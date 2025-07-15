@@ -4,10 +4,8 @@
 --- likely want to delete or heavily modify this file. But it does give a quick
 --- look how to mock a test and some things you can do with Neovim/busted.
 
-local configuration = require("screw._core.configuration")
-local copy_logs_runner = require("screw._commands.copy_logs.runner")
-local logging = require("mega.logging")
-local screw = require("plugin_template")
+local config = require("screw.config")
+local screw = require("screw")
 
 ---@class screw.Configuration
 local _CONFIGURATION_DATA

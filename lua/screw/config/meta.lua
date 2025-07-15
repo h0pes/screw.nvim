@@ -6,7 +6,7 @@
 
 ---@class screw.Config
 ---@field storage? screw.StorageConfig Storage configuration
----@field ui? screw.UIConfig UI configuration  
+---@field ui? screw.UIConfig UI configuration
 ---@field collaboration? screw.CollaborationConfig Collaboration settings
 ---@field export? screw.ExportConfig Export settings
 ---@field import? screw.ImportConfig Import settings

@@ -15,45 +15,45 @@ local function ensure_initialized()
   if _initialized then
     return
   end
-  
+
   -- Initialize project root early and store it
   local utils = require("screw.utils")
   local project_root = utils.get_project_root()
   vim.g.screw_project_root = project_root
-  
+
   local config = require("screw.config")
   config.setup(_user_config)
-  
+
   local notes_manager = require("screw.notes.manager")
   notes_manager.setup()
-  
+
   local notes_ui = require("screw.notes.ui")
   notes_ui.setup()
-  
+
   -- Initialize signs
   local signs = require("screw.signs")
   signs.setup()
-  
+
   -- Initialize collaboration if enabled
   local collaboration = require("screw.collaboration")
   collaboration.setup()
-  
+
   -- Set up autocommands for project lifecycle
   local augroup = vim.api.nvim_create_augroup("ScrewNvim", { clear = true })
-  
+
   -- Save notes when leaving Neovim
   vim.api.nvim_create_autocmd("VimLeavePre", {
     group = augroup,
     callback = function()
       local storage = require("screw.notes.storage")
       storage.force_save()
-      
+
       -- Clean up collaboration
       local collaboration = require("screw.collaboration")
       collaboration.cleanup()
     end,
   })
-  
+
   _initialized = true
 end
 
@@ -70,16 +70,16 @@ end
 function M.create_note(opts)
   ensure_initialized()
   opts = opts or {}
-  
+
   local notes_ui = require("screw.notes.ui")
   local notes_manager = require("screw.notes.manager")
-  
+
   -- If no comment provided, open UI to create note
   if not opts.comment then
     notes_ui.open_create_note_window()
     return nil
   end
-  
+
   return notes_manager.create_note(opts)
 end
 

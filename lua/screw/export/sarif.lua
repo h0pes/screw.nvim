@@ -65,7 +65,7 @@ local function create_rule_descriptor(rule_id, notes)
       break
     end
   end
-  
+
   local rule = {
     id = rule_id,
     name = rule_id,
@@ -82,7 +82,7 @@ local function create_rule_descriptor(rule_id, notes)
       tags = { "security" }
     }
   }
-  
+
   -- Add CWE-specific information if available
   if rule_id:match("^CWE%-") then
     rule.properties.tags = { "security", "CWE" }
@@ -101,7 +101,7 @@ local function create_rule_descriptor(rule_id, notes)
       }
     }
   end
-  
+
   return rule
 end
 
@@ -145,20 +145,20 @@ local function create_result(note)
       state = note.state
     }
   }
-  
+
   -- Add optional fields if present
   if note.description then
     result.message.markdown = note.description
   end
-  
+
   if note.severity then
     result.properties.severity = note.severity
   end
-  
+
   if note.updated_at then
     result.properties.updated_at = note.updated_at
   end
-  
+
   -- Add thread information if replies exist
   if note.replies and #note.replies > 0 then
     result.properties.replies_count = #note.replies
@@ -171,7 +171,7 @@ local function create_result(note)
       })
     end
   end
-  
+
   return result
 end
 
@@ -183,11 +183,11 @@ function M.export(notes, options)
   if not notes or #notes == 0 then
     return nil
   end
-  
+
   -- Group notes by rule ID to create rule descriptors
   local rules_map = {}
   local results = {}
-  
+
   for _, note in ipairs(notes) do
     local rule_id = generate_rule_id(note)
     if not rules_map[rule_id] then
@@ -196,23 +196,23 @@ function M.export(notes, options)
     table.insert(rules_map[rule_id], note)
     table.insert(results, create_result(note))
   end
-  
+
   -- Create rule descriptors
   local rules = {}
   local rule_index_map = {}
   local index = 0
-  
+
   for rule_id, rule_notes in pairs(rules_map) do
     table.insert(rules, create_rule_descriptor(rule_id, rule_notes))
     rule_index_map[rule_id] = index
     index = index + 1
   end
-  
+
   -- Update ruleIndex in results
   for _, result in ipairs(results) do
     result.ruleIndex = rule_index_map[result.ruleId]
   end
-  
+
   -- Create SARIF log structure
   local sarif_log = {
     ["$schema"] = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
@@ -255,7 +255,7 @@ function M.export(notes, options)
       }
     }
   }
-  
+
   -- Calculate statistics
   local stats = sarif_log.runs[1].properties.statistics
   for _, note in ipairs(notes) do
@@ -267,14 +267,14 @@ function M.export(notes, options)
       stats.todoCount = stats.todoCount + 1
     end
   end
-  
+
   -- Convert to JSON
   local success, json_content = pcall(vim.json.encode, sarif_log)
   if not success then
     utils.error("Failed to encode SARIF JSON: " .. tostring(json_content))
     return nil
   end
-  
+
   return json_content
 end
 

@@ -15,22 +15,22 @@ M.backend = nil
 function M.setup()
   -- Reset backend to ensure fresh initialization
   M.backend = nil
-  
+
   local storage_config = config.get_option("storage")
   if not storage_config then
     utils.error("Storage configuration not found")
     return
   end
-  
+
   local backend_type = storage_config.backend or "json"
   local backend_module = "screw.notes.storage." .. backend_type
-  
+
   local has_backend, backend_class = pcall(require, backend_module)
   if not has_backend then
     utils.error("Failed to load storage backend: " .. backend_type)
     return
   end
-  
+
   M.backend = backend_class.new(storage_config)
   M.backend:setup()
 end

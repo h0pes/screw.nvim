@@ -17,7 +17,7 @@ function M.emit(event_name, data)
   if not event_listeners then
     return
   end
-  
+
   for _, listener in ipairs(event_listeners) do
     pcall(listener, data or {})
   end
@@ -30,7 +30,7 @@ function M.on(event_name, callback)
   if not M.listeners[event_name] then
     M.listeners[event_name] = {}
   end
-  
+
   table.insert(M.listeners[event_name], callback)
 end
 
@@ -42,7 +42,7 @@ function M.off(event_name, callback)
   if not event_listeners then
     return
   end
-  
+
   for i, listener in ipairs(event_listeners) do
     if listener == callback then
       table.remove(event_listeners, i)

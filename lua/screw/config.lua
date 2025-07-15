@@ -33,7 +33,7 @@ end
 function M.get_option(key)
   local keys = vim.split(key, ".", { plain = true })
   local value = M.options
-  
+
   for _, k in ipairs(keys) do
     if type(value) == "table" and value[k] ~= nil then
       value = value[k]
@@ -41,7 +41,7 @@ function M.get_option(key)
       error(string.format("Configuration key '%s' not found", key))
     end
   end
-  
+
   return value
 end
 

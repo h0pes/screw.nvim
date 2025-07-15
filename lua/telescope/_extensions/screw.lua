@@ -28,27 +28,27 @@ local M = {}
 local function format_note_entry(note)
   -- Convert relative path to absolute path for file operations
   local absolute_path = screw_utils.get_absolute_path(note.file_path)
-  
+
   local display_items = {
     { note.file_path, "TelescopeResultsIdentifier" },
     { ":" .. note.line_number, "TelescopeResultsLineNr" },
-    { "[" .. note.state .. "]", note.state == "vulnerable" and "DiagnosticError" or 
+    { "[" .. note.state .. "]", note.state == "vulnerable" and "DiagnosticError" or
       note.state == "not_vulnerable" and "DiagnosticOk" or "DiagnosticWarn" },
   }
-  
+
   if note.severity then
-    table.insert(display_items, { "[" .. note.severity .. "]", 
-      note.severity == "high" and "DiagnosticError" or 
-      note.severity == "medium" and "DiagnosticWarn" or 
+    table.insert(display_items, { "[" .. note.severity .. "]",
+      note.severity == "high" and "DiagnosticError" or
+      note.severity == "medium" and "DiagnosticWarn" or
       note.severity == "low" and "DiagnosticInfo" or "DiagnosticHint" })
   end
-  
+
   if note.cwe then
     table.insert(display_items, { "[" .. note.cwe .. "]", "DiagnosticInfo" })
   end
-  
+
   table.insert(display_items, { note.comment, "TelescopeResultsComment" })
-  
+
   local displayer = entry_display.create({
     separator = " ",
     items = {
@@ -60,7 +60,7 @@ local function format_note_entry(note)
       { remaining = true }, -- comment
     },
   })
-  
+
   return {
     value = note,
     display = function(entry)
@@ -92,31 +92,31 @@ local function filter_notes(notes, opts)
   if not opts.filter then
     return notes
   end
-  
+
   local filtered = {}
   for _, note in ipairs(notes) do
     local matches = true
-    
+
     -- Filter by state
     if opts.filter.state and note.state ~= opts.filter.state then
       matches = false
     end
-    
+
     -- Filter by severity
     if opts.filter.severity and note.severity ~= opts.filter.severity then
       matches = false
     end
-    
+
     -- Filter by CWE
     if opts.filter.cwe and note.cwe ~= opts.filter.cwe then
       matches = false
     end
-    
+
     -- Filter by author
     if opts.filter.author and note.author ~= opts.filter.author then
       matches = false
     end
-    
+
     -- Filter by keywords (search in comment and description)
     if opts.filter.keywords then
       local search_text = (note.comment .. " " .. (note.description or "")):lower()
@@ -131,7 +131,7 @@ local function filter_notes(notes, opts)
         matches = false
       end
     end
-    
+
     -- Filter by file (for current file scope)
     if opts.scope == "file" then
       local current_file = vim.fn.expand("%:.")
@@ -139,12 +139,12 @@ local function filter_notes(notes, opts)
         matches = false
       end
     end
-    
+
     if matches then
       table.insert(filtered, note)
     end
   end
-  
+
   return filtered
 end
 
@@ -152,13 +152,13 @@ end
 ---@param opts table?
 function M.notes(opts)
   opts = opts or {}
-  
+
   -- Get all notes
   local all_notes = screw.get_notes()
-  
+
   -- Filter notes based on options
   local notes = filter_notes(all_notes, opts)
-  
+
   if #notes == 0 then
     tel_utils.notify("screw.notes", {
       msg = "No security notes found",
@@ -166,7 +166,7 @@ function M.notes(opts)
     })
     return
   end
-  
+
   -- Sort notes by file path then line number
   table.sort(notes, function(a, b)
     if a.file_path == b.file_path then
@@ -174,7 +174,7 @@ function M.notes(opts)
     end
     return a.file_path < b.file_path
   end)
-  
+
   pickers.new(opts, {
     prompt_title = "Security Notes",
     finder = finders.new_table({
@@ -190,53 +190,53 @@ function M.notes(opts)
         if selection then
           -- Jump to the note location
           vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
-          
+
           -- Validate line number and set cursor position safely
           local line_count = vim.api.nvim_buf_line_count(0)
           local target_line = math.min(selection.lnum, line_count)
           target_line = math.max(target_line, 1)
-          
+
           vim.api.nvim_win_set_cursor(0, { target_line, 0 })
-          
+
           -- Show note details
           screw.view_current_line_notes()
         end
       end)
-      
+
       -- Add custom mapping for editing note
       map("i", "<C-e>", function()
         local selection = action_state.get_selected_entry()
         if selection then
           actions.close(prompt_bufnr)
           vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
-          
+
           -- Validate line number and set cursor position safely
           local line_count = vim.api.nvim_buf_line_count(0)
           local target_line = math.min(selection.lnum, line_count)
           target_line = math.max(target_line, 1)
-          
+
           vim.api.nvim_win_set_cursor(0, { target_line, 0 })
           screw.edit_note()
         end
       end)
-      
+
       -- Add custom mapping for deleting note
       map("i", "<C-d>", function()
         local selection = action_state.get_selected_entry()
         if selection then
           actions.close(prompt_bufnr)
           vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
-          
+
           -- Validate line number and set cursor position safely
           local line_count = vim.api.nvim_buf_line_count(0)
           local target_line = math.min(selection.lnum, line_count)
           target_line = math.max(target_line, 1)
-          
+
           vim.api.nvim_win_set_cursor(0, { target_line, 0 })
           screw.delete_note()
         end
       end)
-      
+
       return true
     end,
   }):find()

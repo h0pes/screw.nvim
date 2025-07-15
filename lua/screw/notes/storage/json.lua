@@ -12,18 +12,18 @@ local M = {}
 ---@return StorageBackend
 function M.new(config)
   local backend = {}
-  
+
   backend.storage_path = nil
   backend.notes = {}
   backend.config = config
-  
+
   --- Initialize storage
   function backend:setup()
     -- Reset storage path to ensure fresh discovery
     self.storage_path = nil
     self:load_notes()
   end
-  
+
   --- Get the current storage path (resolved dynamically)
   function backend:get_storage_path()
     if not self.storage_path then
@@ -32,7 +32,7 @@ function M.new(config)
       local utils = require("screw.utils")
       local storage_dir = utils.get_project_root()
       utils.ensure_dir(storage_dir)
-      
+
       local filename
       if self.config.filename and self.config.filename ~= "" then
         -- User provided a specific filename
@@ -45,22 +45,22 @@ function M.new(config)
           filename = "screw_notes_" .. os.date("%Y%m%d_%H%M%S") .. ".json"
         end
       end
-      
+
       self.storage_path = storage_dir .. "/" .. filename
     end
     return self.storage_path
   end
-  
+
   --- Find existing notes files in the project directory
   ---@param storage_dir string
   ---@return string? filename
   function backend:find_existing_notes_file(storage_dir)
-    local utils = require("screw.utils")
-    
+    -- local utils = require("screw.utils")
+
     -- Use vim.fn.glob to find all screw_notes_*.json files
     local glob_pattern = storage_dir .. "/screw_notes_*.json"
     local files = vim.fn.glob(glob_pattern, false, true)
-    
+
     if type(files) == "table" and #files > 0 then
       -- Sort files by modification time (newest first)
       table.sort(files, function(a, b)
@@ -71,18 +71,18 @@ function M.new(config)
         end
         return false
       end)
-      
+
       -- Return the most recently modified file (just the filename, not full path)
       local full_path = files[1]
       local filename = vim.fn.fnamemodify(full_path, ":t")
       -- utils.info("Found existing notes file: " .. filename)
       return filename
     end
-    
+
     -- utils.info("No existing notes files found in " .. storage_dir)
     return nil
   end
-  
+
   --- Load notes from storage
   function backend:load_notes()
     local storage_path = self:get_storage_path()
@@ -90,25 +90,25 @@ function M.new(config)
       utils.info("No storage path available")
       return
     end
-    
+
     if not utils.file_exists(storage_path) then
       -- utils.info("Notes file does not exist: " .. storage_path)
       self.notes = {}
       return
     end
-    
+
     local content = utils.read_file(storage_path)
     if not content then
       utils.error("Failed to read notes file: " .. storage_path)
       return
     end
-    
+
     local success, data = pcall(vim.json.decode, content)
     if not success then
       utils.error("Failed to parse notes file: " .. data)
       return
     end
-    
+
     if type(data) == "table" and data.notes then
       self.notes = data.notes
       utils.info("Loaded " .. #self.notes .. " notes from " .. storage_path)
@@ -117,7 +117,7 @@ function M.new(config)
       utils.info("No notes found in file: " .. storage_path)
     end
   end
-  
+
   --- Save notes to storage
   ---@return boolean
   function backend:save_notes()
@@ -125,7 +125,7 @@ function M.new(config)
     if not storage_path then
       return false
     end
-    
+
     local data = {
       version = "1.0",
       notes = self.notes,
@@ -134,13 +134,13 @@ function M.new(config)
         total_notes = #self.notes,
       },
     }
-    
+
     local success, json_str = pcall(vim.json.encode, data)
     if not success then
       utils.error("Failed to encode notes: " .. json_str)
       return false
     end
-    
+
     if utils.write_file(storage_path, json_str) then
       return true
     else
@@ -148,13 +148,13 @@ function M.new(config)
       return false
     end
   end
-  
+
   --- Get all notes
   ---@return ScrewNote[]
   function backend:get_all_notes()
     return self.notes
   end
-  
+
   --- Get note by ID
   ---@param id string
   ---@return ScrewNote?
@@ -166,7 +166,7 @@ function M.new(config)
     end
     return nil
   end
-  
+
   --- Save a note (create or update)
   ---@param note ScrewNote
   ---@return boolean
@@ -174,7 +174,7 @@ function M.new(config)
     if not note or not note.id then
       return false
     end
-    
+
     -- Find existing note
     local found_index = nil
     for i, existing_note in ipairs(self.notes) do
@@ -183,7 +183,7 @@ function M.new(config)
         break
       end
     end
-    
+
     if found_index then
       -- Update existing note
       self.notes[found_index] = utils.deep_copy(note)
@@ -191,15 +191,15 @@ function M.new(config)
       -- Add new note
       table.insert(self.notes, utils.deep_copy(note))
     end
-    
+
     -- Auto-save if enabled
     if self.config.auto_save then
       return self:save_notes()
     end
-    
+
     return true
   end
-  
+
   --- Delete a note
   ---@param id string
   ---@return boolean
@@ -211,21 +211,21 @@ function M.new(config)
         break
       end
     end
-    
+
     if found_index then
       table.remove(self.notes, found_index)
-      
+
       -- Auto-save if enabled
       if self.config.auto_save then
         return self:save_notes()
       end
-      
+
       return true
     end
-    
+
     return false
   end
-  
+
   --- Get notes for a specific file
   ---@param file_path string
   ---@return ScrewNote[]
@@ -238,7 +238,7 @@ function M.new(config)
     end
     return file_notes
   end
-  
+
   --- Get notes for a specific line
   ---@param file_path string
   ---@param line_number number
@@ -252,18 +252,18 @@ function M.new(config)
     end
     return line_notes
   end
-  
+
   --- Clear all notes (for testing)
   function backend:clear_notes()
     self.notes = {}
   end
-  
+
   --- Force save notes
   ---@return boolean
   function backend:force_save()
     return self:save_notes()
   end
-  
+
   --- Get storage statistics
   ---@return table
   function backend:get_storage_stats()
@@ -275,15 +275,15 @@ function M.new(config)
       auto_save = self.config.auto_save,
       backend_type = "json",
     }
-    
+
     if stats.file_exists then
       local content = utils.read_file(storage_path)
       stats.file_size = content and #content or 0
     end
-    
+
     return stats
   end
-  
+
   return backend
 end
 

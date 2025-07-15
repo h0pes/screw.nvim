@@ -1,7 +1,7 @@
 --- SQLite storage backend for screw.nvim
 ---
 --- This module implements the StorageBackend interface using SQLite database.
---- Note: This is a placeholder implementation - actual SQLite integration 
+--- Note: This is a placeholder implementation - actual SQLite integration
 --- would require additional dependencies.
 ---
 
@@ -14,11 +14,11 @@ local M = {}
 ---@return StorageBackend
 function M.new(config)
   local backend = {}
-  
+
   backend.db_path = nil
   backend.notes = {}
   backend.config = config
-  
+
   --- Initialize storage
   function backend:setup()
     -- Build full database path from directory and filename
@@ -32,22 +32,22 @@ function M.new(config)
       end
     end
     self.db_path = storage_dir .. "/" .. filename
-    
+
     utils.ensure_dir(storage_dir)
-    
+
     -- For now, fall back to in-memory storage
     -- TODO: Implement actual SQLite integration
     utils.warn("SQLite backend not fully implemented, using in-memory storage")
     self.notes = {}
   end
-  
+
   --- Load notes from storage
   function backend:load_notes()
     -- TODO: Implement SQLite loading
     -- For now, notes remain empty
     self.notes = {}
   end
-  
+
   --- Save notes to storage
   ---@return boolean
   function backend:save_notes()
@@ -55,13 +55,13 @@ function M.new(config)
     -- For now, always return true
     return true
   end
-  
+
   --- Get all notes
   ---@return ScrewNote[]
   function backend:get_all_notes()
     return self.notes
   end
-  
+
   --- Get note by ID
   ---@param id string
   ---@return ScrewNote?
@@ -73,7 +73,7 @@ function M.new(config)
     end
     return nil
   end
-  
+
   --- Save a note (create or update)
   ---@param note ScrewNote
   ---@return boolean
@@ -81,7 +81,7 @@ function M.new(config)
     if not note or not note.id then
       return false
     end
-    
+
     -- Find existing note
     local found_index = nil
     for i, existing_note in ipairs(self.notes) do
@@ -90,7 +90,7 @@ function M.new(config)
         break
       end
     end
-    
+
     if found_index then
       -- Update existing note
       self.notes[found_index] = utils.deep_copy(note)
@@ -98,10 +98,10 @@ function M.new(config)
       -- Add new note
       table.insert(self.notes, utils.deep_copy(note))
     end
-    
+
     return true
   end
-  
+
   --- Delete a note
   ---@param id string
   ---@return boolean
@@ -113,15 +113,15 @@ function M.new(config)
         break
       end
     end
-    
+
     if found_index then
       table.remove(self.notes, found_index)
       return true
     end
-    
+
     return false
   end
-  
+
   --- Get notes for a specific file
   ---@param file_path string
   ---@return ScrewNote[]
@@ -134,7 +134,7 @@ function M.new(config)
     end
     return file_notes
   end
-  
+
   --- Get notes for a specific line
   ---@param file_path string
   ---@param line_number number
@@ -148,18 +148,18 @@ function M.new(config)
     end
     return line_notes
   end
-  
+
   --- Clear all notes (for testing)
   function backend:clear_notes()
     self.notes = {}
   end
-  
+
   --- Force save notes
   ---@return boolean
   function backend:force_save()
     return self:save_notes()
   end
-  
+
   --- Get storage statistics
   ---@return table
   function backend:get_storage_stats()
@@ -170,10 +170,10 @@ function M.new(config)
       auto_save = self.config.auto_save,
       backend_type = "sqlite",
     }
-    
+
     return stats
   end
-  
+
   return backend
 end
 

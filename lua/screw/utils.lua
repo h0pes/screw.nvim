@@ -22,7 +22,7 @@ end
 function M.get_author()
   -- Try multiple environment variables
   local author = vim.env.USER or vim.env.USERNAME or vim.env.LOGNAME
-  
+
   -- Fallback to system methods if env vars don't work
   if not author or author == "" then
     local success, result = pcall(function()
@@ -32,12 +32,12 @@ function M.get_author()
       author = result
     end
   end
-  
+
   -- Final fallback
   if not author or author == "" then
     author = "unknown"
   end
-  
+
   return tostring(author)
 end
 
@@ -49,10 +49,10 @@ function M.get_relative_path(filepath)
   -- Ensure both paths are absolute and normalized
   local abs_filepath = vim.fn.fnamemodify(filepath, ":p")
   local abs_project_root = vim.fn.fnamemodify(project_root, ":p")
-  
+
   -- Remove trailing slash from project root if present
   abs_project_root = abs_project_root:gsub("/$", "")
-  
+
   if abs_filepath:sub(1, #abs_project_root) == abs_project_root then
     local relative = abs_filepath:sub(#abs_project_root + 2) -- Remove leading slash
     return relative == "" and "." or relative
@@ -67,17 +67,17 @@ function M.get_absolute_path(relative_path)
   if relative_path == "." then
     return M.get_project_root()
   end
-  
+
   -- Handle tilde expansion first
   if relative_path:sub(1, 1) == "~" then
     return vim.fn.fnamemodify(relative_path, ":p")
   end
-  
+
   -- If already absolute, return as-is
   if relative_path:sub(1, 1) == "/" or relative_path:match("^%a:") then
     return relative_path
   end
-  
+
   -- Join with project root
   local project_root = M.get_project_root()
   return vim.fn.fnamemodify(project_root .. "/" .. relative_path, ":p")
@@ -213,7 +213,7 @@ function M.get_buffer_info()
   local bufnr = vim.api.nvim_get_current_buf()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local filepath = vim.api.nvim_buf_get_name(bufnr)
-  
+
   return {
     bufnr = bufnr,
     filepath = filepath,
@@ -256,7 +256,7 @@ function M.get_project_root()
   if vim.g.screw_project_root then
     return vim.g.screw_project_root
   end
-  
+
   -- Try to find git root by going up the directory tree from current file
   local current_file = vim.fn.expand("%:p")
   if current_file and current_file ~= "" then
@@ -271,14 +271,14 @@ function M.get_project_root()
       dir = parent
     end
   end
-  
+
   -- Try git command from current working directory
   local git_root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
   if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
     vim.g.screw_project_root = git_root
     return git_root
   end
-  
+
   -- Fall back to the initial working directory
   local nvim_cwd = vim.fn.getcwd()
   vim.g.screw_project_root = nvim_cwd
