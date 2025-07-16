@@ -101,7 +101,14 @@ function M.jump_next(opts)
     -- Show brief info about the note
     local severity_text = target_note.severity and (" [" .. target_note.severity:upper() .. "]") or ""
     local state_text = target_note.state:gsub("_", " "):upper()
-    utils.info(string.format("Note %s%s: %s", state_text, severity_text, target_note.comment:sub(1, 50) .. (string.len(target_note.comment) > 50 and "..." or "")))
+    utils.info(
+      string.format(
+        "Note %s%s: %s",
+        state_text,
+        severity_text,
+        target_note.comment:sub(1, 50) .. (string.len(target_note.comment) > 50 and "..." or "")
+      )
+    )
   else
     local keyword_text = keywords and (" matching " .. table.concat(keywords, ", ")) or ""
     utils.info("No security notes" .. keyword_text .. " found in current buffer")
@@ -151,7 +158,14 @@ function M.jump_prev(opts)
     -- Show brief info about the note
     local severity_text = target_note.severity and (" [" .. target_note.severity:upper() .. "]") or ""
     local state_text = target_note.state:gsub("_", " "):upper()
-    utils.info(string.format("Note %s%s: %s", state_text, severity_text, target_note.comment:sub(1, 50) .. (string.len(target_note.comment) > 50 and "..." or "")))
+    utils.info(
+      string.format(
+        "Note %s%s: %s",
+        state_text,
+        severity_text,
+        target_note.comment:sub(1, 50) .. (string.len(target_note.comment) > 50 and "..." or "")
+      )
+    )
   else
     local keyword_text = keywords and (" matching " .. table.concat(keywords, ", ")) or ""
     utils.info("No security notes" .. keyword_text .. " found in current buffer")

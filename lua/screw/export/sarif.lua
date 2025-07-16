@@ -70,17 +70,17 @@ local function create_rule_descriptor(rule_id, notes)
     id = rule_id,
     name = rule_id,
     shortDescription = {
-      text = "Security Finding: " .. rule_id
+      text = "Security Finding: " .. rule_id,
     },
     fullDescription = {
-      text = representative_note.description or representative_note.comment
+      text = representative_note.description or representative_note.comment,
     },
     defaultConfiguration = {
-      level = state_to_sarif_level(representative_note.state, representative_note.severity)
+      level = state_to_sarif_level(representative_note.state, representative_note.severity),
     },
     properties = {
-      tags = { "security" }
-    }
+      tags = { "security" },
+    },
   }
 
   -- Add CWE-specific information if available
@@ -94,11 +94,11 @@ local function create_rule_descriptor(rule_id, notes)
           toolComponent = {
             name = "CWE",
             version = "4.8",
-            guid = "fd4a7c42-8a9d-4e5f-a5f1-8f7c1f1b8c8d"
-          }
+            guid = "fd4a7c42-8a9d-4e5f-a5f1-8f7c1f1b8c8d",
+          },
         },
-        kinds = { "superset" }
-      }
+        kinds = { "superset" },
+      },
     }
   end
 
@@ -113,15 +113,15 @@ local function create_location(note)
     physicalLocation = {
       artifactLocation = {
         uri = note.file_path,
-        uriBaseId = "%SRCROOT%"
+        uriBaseId = "%SRCROOT%",
       },
       region = {
         startLine = note.line_number,
         startColumn = 1,
         endLine = note.line_number,
-        endColumn = 1
-      }
-    }
+        endColumn = 1,
+      },
+    },
   }
 end
 
@@ -134,7 +134,7 @@ local function create_result(note)
     ruleId = rule_id,
     ruleIndex = 0, -- Will be updated when we know the actual index
     message = {
-      text = note.comment
+      text = note.comment,
     },
     locations = { create_location(note) },
     level = state_to_sarif_level(note.state, note.severity),
@@ -142,8 +142,8 @@ local function create_result(note)
     properties = {
       author = note.author,
       timestamp = note.timestamp,
-      state = note.state
-    }
+      state = note.state,
+    },
   }
 
   -- Add optional fields if present
@@ -167,7 +167,7 @@ local function create_result(note)
       table.insert(result.properties.thread, {
         author = reply.author,
         timestamp = reply.timestamp,
-        comment = reply.comment
+        comment = reply.comment,
       })
     end
   end
@@ -225,35 +225,35 @@ function M.export(notes, options)
             version = "1.0.0",
             informationUri = "https://github.com/h0pes/screw.nvim",
             shortDescription = {
-              text = "Security code review plugin for Neovim"
+              text = "Security code review plugin for Neovim",
             },
             fullDescription = {
-              text = "A Neovim plugin designed to streamline security code reviews with comprehensive note-taking capabilities, CWE classification, and collaboration features."
+              text = "A Neovim plugin designed to streamline security code reviews with comprehensive note-taking capabilities, CWE classification, and collaboration features.",
             },
             rules = rules,
             properties = {
               generator = "screw.nvim",
-              exportTimestamp = utils.get_timestamp()
-            }
-          }
+              exportTimestamp = utils.get_timestamp(),
+            },
+          },
         },
         results = results,
         columnKind = "utf16CodeUnits",
         properties = {
           exportOptions = {
             includeReplies = options.include_replies ~= false,
-            filter = options.filter
+            filter = options.filter,
           },
           statistics = {
             totalNotes = #notes,
             totalRules = #rules,
             vulnerableCount = 0,
             notVulnerableCount = 0,
-            todoCount = 0
-          }
-        }
-      }
-    }
+            todoCount = 0,
+          },
+        },
+      },
+    },
   }
 
   -- Calculate statistics
@@ -286,7 +286,7 @@ function M.get_format_info()
     description = "Static Analysis Results Interchange Format v2.1.0",
     extension = "sarif",
     mime_type = "application/sarif+json",
-    specification = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html"
+    specification = "https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html",
   }
 end
 

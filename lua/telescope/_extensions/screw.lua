@@ -32,15 +32,22 @@ local function format_note_entry(note)
   local display_items = {
     { note.file_path, "TelescopeResultsIdentifier" },
     { ":" .. note.line_number, "TelescopeResultsLineNr" },
-    { "[" .. note.state .. "]", note.state == "vulnerable" and "DiagnosticError" or
-      note.state == "not_vulnerable" and "DiagnosticOk" or "DiagnosticWarn" },
+    {
+      "[" .. note.state .. "]",
+      note.state == "vulnerable" and "DiagnosticError"
+        or note.state == "not_vulnerable" and "DiagnosticOk"
+        or "DiagnosticWarn",
+    },
   }
 
   if note.severity then
-    table.insert(display_items, { "[" .. note.severity .. "]",
-      note.severity == "high" and "DiagnosticError" or
-      note.severity == "medium" and "DiagnosticWarn" or
-      note.severity == "low" and "DiagnosticInfo" or "DiagnosticHint" })
+    table.insert(display_items, {
+      "[" .. note.severity .. "]",
+      note.severity == "high" and "DiagnosticError"
+        or note.severity == "medium" and "DiagnosticWarn"
+        or note.severity == "low" and "DiagnosticInfo"
+        or "DiagnosticHint",
+    })
   end
 
   if note.cwe then
@@ -52,11 +59,11 @@ local function format_note_entry(note)
   local displayer = entry_display.create({
     separator = " ",
     items = {
-      { width = 30 },  -- file_path
-      { width = 6 },   -- line_number
-      { width = 15 },  -- state
-      { width = 10 },  -- severity
-      { width = 10 },  -- cwe
+      { width = 30 }, -- file_path
+      { width = 6 }, -- line_number
+      { width = 15 }, -- state
+      { width = 10 }, -- severity
+      { width = 10 }, -- cwe
       { remaining = true }, -- comment
     },
   })
@@ -76,11 +83,11 @@ local function format_note_entry(note)
       note.severity or "",
       note.author,
     }, " "),
-    filename = absolute_path,  -- Use absolute path for file operations
+    filename = absolute_path, -- Use absolute path for file operations
     lnum = note.line_number,
     col = 1,
     text = note.comment .. (note.description and ("\n" .. note.description) or ""),
-    path = absolute_path,  -- Use absolute path for preview
+    path = absolute_path, -- Use absolute path for preview
   }
 end
 
@@ -175,71 +182,73 @@ function M.notes(opts)
     return a.file_path < b.file_path
   end)
 
-  pickers.new(opts, {
-    prompt_title = "Security Notes",
-    finder = finders.new_table({
-      results = notes,
-      entry_maker = format_note_entry,
-    }),
-    sorter = conf.generic_sorter(opts),
-    previewer = conf.file_previewer(opts),
-    attach_mappings = function(prompt_bufnr, map)
-      actions.select_default:replace(function()
-        actions.close(prompt_bufnr)
-        local selection = action_state.get_selected_entry()
-        if selection then
-          -- Jump to the note location
-          vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
-
-          -- Validate line number and set cursor position safely
-          local line_count = vim.api.nvim_buf_line_count(0)
-          local target_line = math.min(selection.lnum, line_count)
-          target_line = math.max(target_line, 1)
-
-          vim.api.nvim_win_set_cursor(0, { target_line, 0 })
-
-          -- Show note details
-          screw.view_current_line_notes()
-        end
-      end)
-
-      -- Add custom mapping for editing note
-      map("i", "<C-e>", function()
-        local selection = action_state.get_selected_entry()
-        if selection then
+  pickers
+    .new(opts, {
+      prompt_title = "Security Notes",
+      finder = finders.new_table({
+        results = notes,
+        entry_maker = format_note_entry,
+      }),
+      sorter = conf.generic_sorter(opts),
+      previewer = conf.file_previewer(opts),
+      attach_mappings = function(prompt_bufnr, map)
+        actions.select_default:replace(function()
           actions.close(prompt_bufnr)
-          vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
+          local selection = action_state.get_selected_entry()
+          if selection then
+            -- Jump to the note location
+            vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
 
-          -- Validate line number and set cursor position safely
-          local line_count = vim.api.nvim_buf_line_count(0)
-          local target_line = math.min(selection.lnum, line_count)
-          target_line = math.max(target_line, 1)
+            -- Validate line number and set cursor position safely
+            local line_count = vim.api.nvim_buf_line_count(0)
+            local target_line = math.min(selection.lnum, line_count)
+            target_line = math.max(target_line, 1)
 
-          vim.api.nvim_win_set_cursor(0, { target_line, 0 })
-          screw.edit_note()
-        end
-      end)
+            vim.api.nvim_win_set_cursor(0, { target_line, 0 })
 
-      -- Add custom mapping for deleting note
-      map("i", "<C-d>", function()
-        local selection = action_state.get_selected_entry()
-        if selection then
-          actions.close(prompt_bufnr)
-          vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
+            -- Show note details
+            screw.view_current_line_notes()
+          end
+        end)
 
-          -- Validate line number and set cursor position safely
-          local line_count = vim.api.nvim_buf_line_count(0)
-          local target_line = math.min(selection.lnum, line_count)
-          target_line = math.max(target_line, 1)
+        -- Add custom mapping for editing note
+        map("i", "<C-e>", function()
+          local selection = action_state.get_selected_entry()
+          if selection then
+            actions.close(prompt_bufnr)
+            vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
 
-          vim.api.nvim_win_set_cursor(0, { target_line, 0 })
-          screw.delete_note()
-        end
-      end)
+            -- Validate line number and set cursor position safely
+            local line_count = vim.api.nvim_buf_line_count(0)
+            local target_line = math.min(selection.lnum, line_count)
+            target_line = math.max(target_line, 1)
 
-      return true
-    end,
-  }):find()
+            vim.api.nvim_win_set_cursor(0, { target_line, 0 })
+            screw.edit_note()
+          end
+        end)
+
+        -- Add custom mapping for deleting note
+        map("i", "<C-d>", function()
+          local selection = action_state.get_selected_entry()
+          if selection then
+            actions.close(prompt_bufnr)
+            vim.cmd("edit " .. vim.fn.fnameescape(selection.filename))
+
+            -- Validate line number and set cursor position safely
+            local line_count = vim.api.nvim_buf_line_count(0)
+            local target_line = math.min(selection.lnum, line_count)
+            target_line = math.max(target_line, 1)
+
+            vim.api.nvim_win_set_cursor(0, { target_line, 0 })
+            screw.delete_note()
+          end
+        end)
+
+        return true
+      end,
+    })
+    :find()
 end
 
 --- Search notes in current file only

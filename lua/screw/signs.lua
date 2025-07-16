@@ -14,8 +14,8 @@ M.namespace = vim.api.nvim_create_namespace("screw_signs")
 
 -- Sign priority levels for multiple notes per line
 local SIGN_PRIORITY = {
-  vulnerable = 3,     -- Highest priority
-  todo = 2,          -- Medium priority
+  vulnerable = 3, -- Highest priority
+  todo = 2, -- Medium priority
   not_vulnerable = 1, -- Lowest priority
 }
 
@@ -47,17 +47,17 @@ function M.setup_highlights()
   -- Define highlight groups if they don't exist
   vim.api.nvim_set_hl(0, "ScrewSignVulnerable", {
     fg = signs_config.colors.vulnerable,
-    default = true
+    default = true,
   })
 
   vim.api.nvim_set_hl(0, "ScrewSignNotVulnerable", {
     fg = signs_config.colors.not_vulnerable,
-    default = true
+    default = true,
   })
 
   vim.api.nvim_set_hl(0, "ScrewSignTodo", {
     fg = signs_config.colors.todo,
-    default = true
+    default = true,
   })
 end
 

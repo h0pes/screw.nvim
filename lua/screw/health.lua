@@ -151,7 +151,9 @@ local function check_lua_dependencies()
         vim.health.error(description .. " not available or incomplete")
       end
     else
-      local success = pcall(function() return _G[module_name] end)
+      local success = pcall(function()
+        return _G[module_name]
+      end)
       if success and _G[module_name] then
         vim.health.ok(description .. " available")
       else

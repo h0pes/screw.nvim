@@ -78,7 +78,12 @@ function M.export(notes, options)
   table.insert(lines, "")
 
   -- Add severity breakdown if there are notes with severity
-  if stats.by_severity.high > 0 or stats.by_severity.medium > 0 or stats.by_severity.low > 0 or stats.by_severity.info > 0 then
+  if
+    stats.by_severity.high > 0
+    or stats.by_severity.medium > 0
+    or stats.by_severity.low > 0
+    or stats.by_severity.info > 0
+  then
     table.insert(lines, "### By Severity")
     table.insert(lines, "")
     table.insert(lines, "- **High**: " .. stats.by_severity.high)
@@ -117,11 +122,15 @@ function M.export_note(lines, note, options)
   }
 
   -- Note header
-  table.insert(lines, string.format("### %s Line %d - %s",
-    state_emoji[note.state] or "S",
-    note.line_number,
-    note.state:gsub("_", " "):upper()
-  ))
+  table.insert(
+    lines,
+    string.format(
+      "### %s Line %d - %s",
+      state_emoji[note.state] or "S",
+      note.line_number,
+      note.state:gsub("_", " "):upper()
+    )
+  )
   table.insert(lines, "")
 
   -- Metadata

@@ -60,8 +60,7 @@ function M.export(notes, options)
       if note.replies and #note.replies > 0 then
         local reply_parts = {}
         for _, reply in ipairs(note.replies) do
-          table.insert(reply_parts, string.format("[%s by %s] %s",
-            reply.timestamp, reply.author, reply.comment))
+          table.insert(reply_parts, string.format("[%s by %s] %s", reply.timestamp, reply.author, reply.comment))
         end
         reply_text = table.concat(reply_parts, " | ")
       end

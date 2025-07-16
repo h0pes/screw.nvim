@@ -190,7 +190,7 @@ function M.create_schema(connection)
       notes = { "file_path", "line_number", "author", "timestamp" },
       changes = { "timestamp", "session_id", "note_id" },
       user_presence = { "user_id", "last_seen" },
-    }
+    },
   }
 
   return schema

@@ -267,7 +267,9 @@ function M.get_project_root()
         return dir
       end
       local parent = vim.fn.fnamemodify(dir, ":h")
-      if parent == dir then break end
+      if parent == dir then
+        break
+      end
       dir = parent
     end
   end

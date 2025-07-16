@@ -55,11 +55,15 @@ function M.start_sync()
   local sync = require("screw.collaboration.sync")
 
   M.sync_timer = vim.loop.new_timer()
-  M.sync_timer:start(0, sync_interval, vim.schedule_wrap(function()
-    if M.enabled and M.database then
-      sync.synchronize(M.database)
-    end
-  end))
+  M.sync_timer:start(
+    0,
+    sync_interval,
+    vim.schedule_wrap(function()
+      if M.enabled and M.database then
+        sync.synchronize(M.database)
+      end
+    end)
+  )
 end
 
 --- Stop synchronization process
@@ -158,8 +162,9 @@ function M.handle_conflicts(conflicts)
       local storage = require("screw.notes.storage")
       storage.save_note(resolution.note)
 
-      utils.info(string.format("Resolved conflict for note %s using %s strategy",
-        conflict.note_id, resolution.strategy))
+      utils.info(
+        string.format("Resolved conflict for note %s using %s strategy", conflict.note_id, resolution.strategy)
+      )
     end
   end
 end

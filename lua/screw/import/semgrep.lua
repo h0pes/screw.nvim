@@ -100,7 +100,7 @@ function M.convert_result_to_note(result, options)
       state = "not_vulnerable"
     else
       -- For unknown severities, try direct mapping
-      if vim.tbl_contains({"high", "medium", "low", "info"}, semgrep_severity) then
+      if vim.tbl_contains({ "high", "medium", "low", "info" }, semgrep_severity) then
         severity = semgrep_severity
         if semgrep_severity == "high" or semgrep_severity == "medium" then
           state = "vulnerable"

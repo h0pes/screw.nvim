@@ -21,53 +21,53 @@ local _ORIGINAL_NOTIFY = vim.notify
 ---@param data string Some text to print to stdout.
 ---
 local function _save_prints(data)
-    table.insert(_DATA, data)
+  table.insert(_DATA, data)
 end
 
 --- Mock all functions / states before a unittest runs (call this before each test).
 local function _initialize_prints()
-    vim.notify = _save_prints
+  vim.notify = _save_prints
 end
 
 --- Watch the `copy-logs` API command for function calls.
 local function _initialize_copy_log()
-    local function _save_path(path)
-        _DATA = { path }
-    end
+  local function _save_path(path)
+    _DATA = { path }
+  end
 
-    _CONFIGURATION_DATA = vim.deepcopy(configuration.DATA)
-    copy_logs_runner._read_file = _save_path
+  _CONFIGURATION_DATA = vim.deepcopy(configuration.DATA)
+  copy_logs_runner._read_file = _save_path
 end
 
 --- Write a log file so we can query its later later.
 local function _make_fake_log(path)
-    configuration.DATA.logging.output_path = path
-    local logging_configuration = configuration.DATA.logging or {}
-    ---@cast logging_configuration mega.logging.SparseLoggerOptions
-    logging.set_configuration("screw", logging_configuration)
+  configuration.DATA.logging.output_path = path
+  local logging_configuration = configuration.DATA.logging or {}
+  ---@cast logging_configuration mega.logging.SparseLoggerOptions
+  logging.set_configuration("screw", logging_configuration)
 
-    local file = io.open(path, "w") -- Open the file in write mode
+  local file = io.open(path, "w") -- Open the file in write mode
 
-    if not file then
-        error(string.format('Path "%s" is not writable.', path))
-    end
+  if not file then
+    error(string.format('Path "%s" is not writable.', path))
+  end
 
-    file:write("aaa\nbbb\nccc\n")
-    file:close()
+  file:write("aaa\nbbb\nccc\n")
+  file:close()
 end
 
 --- Remove the "watcher" that we added during unittesting.
 local function _reset_copy_log()
-    copy_logs_runner._read_file = _ORIGINAL_COPY_LOGS_READ_FILE
+  copy_logs_runner._read_file = _ORIGINAL_COPY_LOGS_READ_FILE
 
-    configuration.DATA = _CONFIGURATION_DATA
-    _DATA = {}
+  configuration.DATA = _CONFIGURATION_DATA
+  _DATA = {}
 end
 
 --- Reset all functions / states to their previous settings before the test had run.
 local function _reset_prints()
-    vim.notify = _ORIGINAL_NOTIFY
-    _DATA = {}
+  vim.notify = _ORIGINAL_NOTIFY
+  _DATA = {}
 end
 
 --- Wait for our (mocked) unittest variable to get some data back.
@@ -77,220 +77,220 @@ end
 ---    then we stop waiting for all of the functions to call.
 ---
 local function _wait_for_result(timeout)
-    if timeout == nil then
-        timeout = 1000
-    end
+  if timeout == nil then
+    timeout = 1000
+  end
 
-    vim.wait(timeout, function()
-        return not vim.tbl_isempty(_DATA)
-    end)
+  vim.wait(timeout, function()
+    return not vim.tbl_isempty(_DATA)
+  end)
 end
 
 describe("arbitrary-thing API", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #arbitrary-thing with #default arguments", function()
-        screw.run_arbitrary_thing({})
+  it("runs #arbitrary-thing with #default arguments", function()
+    screw.run_arbitrary_thing({})
 
-        assert.same({ "<No text given>" }, _DATA)
-    end)
+    assert.same({ "<No text given>" }, _DATA)
+  end)
 
-    it("runs #arbitrary-thing with arguments", function()
-        screw.run_arbitrary_thing({ "v", "t" })
+  it("runs #arbitrary-thing with arguments", function()
+    screw.run_arbitrary_thing({ "v", "t" })
 
-        assert.same({ "v, t" }, _DATA)
-    end)
+    assert.same({ "v, t" }, _DATA)
+  end)
 end)
 
 describe("arbitrary-thing commands", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #arbitrary-thing with #default arguments", function()
-        vim.cmd([[screw arbitrary-thing]])
-        assert.same({ "<No text given>" }, _DATA)
-    end)
+  it("runs #arbitrary-thing with #default arguments", function()
+    vim.cmd([[screw arbitrary-thing]])
+    assert.same({ "<No text given>" }, _DATA)
+  end)
 
-    it("runs #arbitrary-thing with arguments", function()
-        vim.cmd([[screw arbitrary-thing -vvv -abc -f]])
+  it("runs #arbitrary-thing with arguments", function()
+    vim.cmd([[screw arbitrary-thing -vvv -abc -f]])
 
-        assert.same({ "-v, -v, -v, -a, -b, -c, -f" }, _DATA)
-    end)
+    assert.same({ "-v, -v, -v, -a, -b, -c, -f" }, _DATA)
+  end)
 end)
 
 describe("copy logs API", function()
-    before_each(_initialize_copy_log)
-    after_each(_reset_copy_log)
+  before_each(_initialize_copy_log)
+  after_each(_reset_copy_log)
 
-    it("runs with an explicit file path", function()
-        local path = vim.fn.tempname() .. "copy_logs_test.log"
-        _make_fake_log(path)
+  it("runs with an explicit file path", function()
+    local path = vim.fn.tempname() .. "copy_logs_test.log"
+    _make_fake_log(path)
 
-        screw.run_copy_logs(path)
-        _wait_for_result()
+    screw.run_copy_logs(path)
+    _wait_for_result()
 
-        assert.same({ path }, _DATA)
-    end)
+    assert.same({ path }, _DATA)
+  end)
 
-    it("runs with default arguments", function()
-        local expected = vim.fn.tempname() .. "_copy_logs_default_test.log"
-        _make_fake_log(expected)
+  it("runs with default arguments", function()
+    local expected = vim.fn.tempname() .. "_copy_logs_default_test.log"
+    _make_fake_log(expected)
 
-        screw.run_copy_logs()
-        _wait_for_result()
+    screw.run_copy_logs()
+    _wait_for_result()
 
-        assert.same({ expected }, _DATA)
-    end)
+    assert.same({ expected }, _DATA)
+  end)
 end)
 
 describe("copy logs command", function()
-    before_each(_initialize_copy_log)
-    after_each(_reset_copy_log)
+  before_each(_initialize_copy_log)
+  after_each(_reset_copy_log)
 
-    it("runs with an explicit file path", function()
-        local expected = vim.fn.tempname() .. "_copy_logs_explicit_file_path_test.log"
-        _make_fake_log(expected)
+  it("runs with an explicit file path", function()
+    local expected = vim.fn.tempname() .. "_copy_logs_explicit_file_path_test.log"
+    _make_fake_log(expected)
 
-        vim.cmd(string.format('screw copy-logs "%s"', expected))
-        _wait_for_result()
+    vim.cmd(string.format('screw copy-logs "%s"', expected))
+    _wait_for_result()
 
-        assert.same({ expected }, _DATA)
-    end)
+    assert.same({ expected }, _DATA)
+  end)
 
-    it("runs with default arguments", function()
-        local expected = vim.fn.tempname() .. "_copy_logs_default_arguments_test.log"
-        _make_fake_log(expected)
+  it("runs with default arguments", function()
+    local expected = vim.fn.tempname() .. "_copy_logs_default_arguments_test.log"
+    _make_fake_log(expected)
 
-        vim.cmd([[screw copy-logs]])
+    vim.cmd([[screw copy-logs]])
 
-        _wait_for_result()
+    _wait_for_result()
 
-        assert.same({ expected }, _DATA)
-    end)
+    assert.same({ expected }, _DATA)
+  end)
 end)
 
 describe("hello world API - say phrase/word", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #hello-world with default `say phrase` arguments - 001", function()
-        screw.run_hello_world_say_phrase({ "" })
+  it("runs #hello-world with default `say phrase` arguments - 001", function()
+    screw.run_hello_world_say_phrase({ "" })
 
-        assert.same({ "No phrase was given" }, _DATA)
-    end)
+    assert.same({ "No phrase was given" }, _DATA)
+  end)
 
-    it("runs #hello-world with default `say phrase` arguments - 002", function()
-        screw.run_hello_world_say_phrase({})
+  it("runs #hello-world with default `say phrase` arguments - 002", function()
+    screw.run_hello_world_say_phrase({})
 
-        assert.same({ "No phrase was given" }, _DATA)
-    end)
+    assert.same({ "No phrase was given" }, _DATA)
+  end)
 
-    it("runs #hello-world with default `say word` arguments - 001", function()
-        screw.run_hello_world_say_word("")
+  it("runs #hello-world with default `say word` arguments - 001", function()
+    screw.run_hello_world_say_word("")
 
-        assert.same({ "No word was given" }, _DATA)
-    end)
+    assert.same({ "No word was given" }, _DATA)
+  end)
 
-    it("runs #hello-world say phrase - with all of its arguments", function()
-        screw.run_hello_world_say_phrase({ "Hello,", "World!" }, 2, "lowercase")
+  it("runs #hello-world say phrase - with all of its arguments", function()
+    screw.run_hello_world_say_phrase({ "Hello,", "World!" }, 2, "lowercase")
 
-        assert.same({ "Saying phrase", "hello, world!", "hello, world!" }, _DATA)
-    end)
+    assert.same({ "Saying phrase", "hello, world!", "hello, world!" }, _DATA)
+  end)
 
-    it("runs #hello-world say word - with all of its arguments", function()
-        screw.run_hello_world_say_phrase({ "Hi" }, 2, "uppercase")
+  it("runs #hello-world say word - with all of its arguments", function()
+    screw.run_hello_world_say_phrase({ "Hi" }, 2, "uppercase")
 
-        assert.same({ "Saying phrase", "HI", "HI" }, _DATA)
-    end)
+    assert.same({ "Saying phrase", "HI", "HI" }, _DATA)
+  end)
 end)
 
 describe("hello world commands - say phrase/word", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #hello-world with default arguments", function()
-        vim.cmd([[screw hello-world say phrase]])
+  it("runs #hello-world with default arguments", function()
+    vim.cmd([[screw hello-world say phrase]])
 
-        assert.same({ "No phrase was given" }, _DATA)
-    end)
+    assert.same({ "No phrase was given" }, _DATA)
+  end)
 
-    it("runs #hello-world say phrase - with all of its arguments", function()
-        vim.cmd([[screw hello-world say phrase "Hello, World!" --repeat=2 --style=lowercase]])
+  it("runs #hello-world say phrase - with all of its arguments", function()
+    vim.cmd([[screw hello-world say phrase "Hello, World!" --repeat=2 --style=lowercase]])
 
-        assert.same({ "Saying phrase", "hello, world!", "hello, world!" }, _DATA)
-    end)
+    assert.same({ "Saying phrase", "hello, world!", "hello, world!" }, _DATA)
+  end)
 
-    it("runs #hello-world say word - with all of its arguments", function()
-        vim.cmd([[screw hello-world say word "Hi" --repeat=2 --style=uppercase]])
+  it("runs #hello-world say word - with all of its arguments", function()
+    vim.cmd([[screw hello-world say word "Hi" --repeat=2 --style=uppercase]])
 
-        assert.same({ "Saying word", "HI", "HI" }, _DATA)
-    end)
+    assert.same({ "Saying word", "HI", "HI" }, _DATA)
+  end)
 end)
 
 describe("goodnight-moon API", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #goodnight-moon #count-sheep with all of its arguments", function()
-        screw.run_goodnight_moon_count_sheep(3)
+  it("runs #goodnight-moon #count-sheep with all of its arguments", function()
+    screw.run_goodnight_moon_count_sheep(3)
 
-        assert.same({ "1 Sheep", "2 Sheep", "3 Sheep" }, _DATA)
-    end)
+    assert.same({ "1 Sheep", "2 Sheep", "3 Sheep" }, _DATA)
+  end)
 
-    it("runs #goodnight-moon #read with all of its arguments", function()
-        screw.run_goodnight_moon_read("a good book")
+  it("runs #goodnight-moon #read with all of its arguments", function()
+    screw.run_goodnight_moon_read("a good book")
 
-        assert.same({ "a good book: it is a book" }, _DATA)
-    end)
+    assert.same({ "a good book: it is a book" }, _DATA)
+  end)
 
-    it("runs #goodnight-moon #sleep with all of its arguments", function()
-        screw.run_goodnight_moon_sleep(3)
+  it("runs #goodnight-moon #sleep with all of its arguments", function()
+    screw.run_goodnight_moon_sleep(3)
 
-        assert.same({ "Zzz", "Zzz", "Zzz" }, _DATA)
-    end)
+    assert.same({ "Zzz", "Zzz", "Zzz" }, _DATA)
+  end)
 end)
 
 describe("goodnight-moon commands", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    it("runs #goodnight-moon #count-sheep with all of its arguments", function()
-        vim.cmd([[screw goodnight-moon count-sheep 3]])
+  it("runs #goodnight-moon #count-sheep with all of its arguments", function()
+    vim.cmd([[screw goodnight-moon count-sheep 3]])
 
-        assert.same({ "1 Sheep", "2 Sheep", "3 Sheep" }, _DATA)
-    end)
+    assert.same({ "1 Sheep", "2 Sheep", "3 Sheep" }, _DATA)
+  end)
 
-    it("runs #goodnight-moon #read with all of its arguments", function()
-        vim.cmd([[screw goodnight-moon read "a good book"]])
+  it("runs #goodnight-moon #read with all of its arguments", function()
+    vim.cmd([[screw goodnight-moon read "a good book"]])
 
-        assert.same({ "a good book: it is a book" }, _DATA)
-    end)
+    assert.same({ "a good book: it is a book" }, _DATA)
+  end)
 
-    it("runs #goodnight-moon #sleep with all of its arguments", function()
-        vim.cmd([[screw goodnight-moon sleep -z -z -z]])
+  it("runs #goodnight-moon #sleep with all of its arguments", function()
+    vim.cmd([[screw goodnight-moon sleep -z -z -z]])
 
-        assert.same({ "Zzz", "Zzz", "Zzz" }, _DATA)
-    end)
+    assert.same({ "Zzz", "Zzz", "Zzz" }, _DATA)
+  end)
 end)
 
 describe("help API", function()
-    before_each(_initialize_prints)
-    after_each(_reset_prints)
+  before_each(_initialize_prints)
+  after_each(_reset_prints)
 
-    describe("fallback help", function()
-        it("works on a nested subparser - 003", function()
-            vim.cmd("screw hello-world say")
-            assert.same({ "Usage: {say} {phrase,word} [--help]" }, _DATA)
-        end)
+  describe("fallback help", function()
+    it("works on a nested subparser - 003", function()
+      vim.cmd("screw hello-world say")
+      assert.same({ "Usage: {say} {phrase,word} [--help]" }, _DATA)
     end)
+  end)
 
-    describe("--help flag", function()
-        it("works on the base parser", function()
-            vim.cmd("screw --help")
+  describe("--help flag", function()
+    it("works on the base parser", function()
+      vim.cmd("screw --help")
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: screw {arbitrary-thing,copy-logs,goodnight-moon,hello-world} [--help]
 
 Commands:
@@ -302,14 +302,14 @@ Commands:
 Options:
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on a nested subparser - 001", function()
-            vim.cmd([[screw hello-world say --help]])
+    it("works on a nested subparser - 001", function()
+      vim.cmd([[screw hello-world say --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {say} {phrase,word} [--help]
 
 Commands:
@@ -319,14 +319,14 @@ Commands:
 Options:
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on a nested subparser - 002", function()
-            vim.cmd([[screw hello-world say phrase --help]])
+    it("works on a nested subparser - 002", function()
+      vim.cmd([[screw hello-world say phrase --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {phrase} PHRASES* [--repeat {1,2,3,4,5}] [--style {lowercase,uppercase}] [--help]
 
 Positional Arguments:
@@ -337,14 +337,14 @@ Options:
     --style -s {lowercase,uppercase}    lowercase makes WORD into word. uppercase does the reverse.
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on a nested subparser - 003", function()
-            vim.cmd([[screw hello-world say word --help]])
+    it("works on a nested subparser - 003", function()
+      vim.cmd([[screw hello-world say word --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {word} WORD [--repeat {1,2,3,4,5}] [--style {lowercase,uppercase}] [--help]
 
 Positional Arguments:
@@ -355,14 +355,14 @@ Options:
     --style -s {lowercase,uppercase}    lowercase makes WORD into word. uppercase does the reverse.
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on the subparsers - 001", function()
-            vim.cmd([[screw arbitrary-thing --help]])
+    it("works on the subparsers - 001", function()
+      vim.cmd([[screw arbitrary-thing --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {arbitrary-thing} [-a] [-b] [-c] [-f] [-v] [--help]
 
 Options:
@@ -373,14 +373,14 @@ Options:
     -v *    The -v flag.
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on the subparsers - 002", function()
-            vim.cmd([[screw copy-logs --help]])
+    it("works on the subparsers - 002", function()
+      vim.cmd([[screw copy-logs --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {copy-logs} LOG [--help]
 
 Positional Arguments:
@@ -389,14 +389,14 @@ Positional Arguments:
 Options:
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on the subparsers - 003", function()
-            vim.cmd([[screw goodnight-moon --help]])
+    it("works on the subparsers - 003", function()
+      vim.cmd([[screw goodnight-moon --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {goodnight-moon} {count-sheep,read,sleep} [--help]
 
 Commands:
@@ -407,14 +407,14 @@ Commands:
 Options:
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
+    end)
 
-        it("works on the subparsers - 004", function()
-            vim.cmd([[screw hello-world --help]])
+    it("works on the subparsers - 004", function()
+      vim.cmd([[screw hello-world --help]])
 
-            assert.same({
-                [[
+      assert.same({
+        [[
 Usage: {hello-world} {say} [--help]
 
 Commands:
@@ -423,7 +423,7 @@ Commands:
 Options:
     --help -h    Show this help message and exit.
 ]],
-            }, _DATA)
-        end)
+      }, _DATA)
     end)
+  end)
 end)

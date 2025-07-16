@@ -12,11 +12,11 @@ local M = {}
 --- Current float window handles
 M.current_win = nil
 M.current_buf = nil
-M.original_content = nil  -- Track original content for change detection
-M.current_mode = nil      -- Track current UI mode: "create", "edit", "view", "select", "reply"
-M.current_note = nil      -- Track current note being edited/replied to
-M.buffer_info = nil       -- Store original buffer info when creating notes
-M.highlight_ns = nil      -- Namespace for highlights
+M.original_content = nil -- Track original content for change detection
+M.current_mode = nil -- Track current UI mode: "create", "edit", "view", "select", "reply"
+M.current_note = nil -- Track current note being edited/replied to
+M.buffer_info = nil -- Store original buffer info when creating notes
+M.highlight_ns = nil -- Namespace for highlights
 
 --- Initialize UI
 function M.setup()
@@ -104,12 +104,7 @@ end
 --- Show save confirmation dialog
 ---@param callback function Function to call if user chooses to save
 function M.show_save_confirmation(callback)
-  local confirm_result = vim.fn.confirm(
-    "Do you want to save the note?",
-    "&Yes\n&No\n&Cancel",
-    1,
-    "Question"
-  )
+  local confirm_result = vim.fn.confirm("Do you want to save the note?", "&Yes\n&No\n&Cancel", 1, "Question")
 
   if confirm_result == 1 then -- Yes
     callback()
@@ -123,13 +118,21 @@ end
 --- Close current float window with save confirmation if needed
 function M.close_float_window()
   -- Check for unsaved changes in edit modes
-  if (M.current_mode == "create" or M.current_mode == "edit" or M.current_mode == "reply") and M.has_unsaved_changes() then
+  if
+    (M.current_mode == "create" or M.current_mode == "edit" or M.current_mode == "reply") and M.has_unsaved_changes()
+  then
     if M.current_mode == "create" then
-      M.show_save_confirmation(function() M.save_note_from_buffer() end)
+      M.show_save_confirmation(function()
+        M.save_note_from_buffer()
+      end)
     elseif M.current_mode == "edit" then
-      M.show_save_confirmation(function() M.save_edited_note_from_buffer() end)
+      M.show_save_confirmation(function()
+        M.save_edited_note_from_buffer()
+      end)
     elseif M.current_mode == "reply" then
-      M.show_save_confirmation(function() M.save_reply_from_buffer() end)
+      M.show_save_confirmation(function()
+        M.save_reply_from_buffer()
+      end)
     end
   else
     M.close_float_window_force()
@@ -228,7 +231,7 @@ function M.open_create_note_window()
   M.current_win = win
   M.current_buf = buf
   M.current_mode = "create"
-  M.buffer_info = buffer_info  -- Store the original buffer info
+  M.buffer_info = buffer_info -- Store the original buffer info
 
   -- Set buffer content
   local lines = {
@@ -339,13 +342,13 @@ function M.save_note_from_buffer()
   end
 
   -- Validate state
-  if not vim.tbl_contains({"vulnerable", "not_vulnerable", "todo"}, state) then
+  if not vim.tbl_contains({ "vulnerable", "not_vulnerable", "todo" }, state) then
     utils.error("Invalid state. Must be: vulnerable, not_vulnerable, or todo")
     return
   end
 
   -- Validate severity
-  if severity ~= "" and not vim.tbl_contains({"high", "medium", "low", "info"}, severity) then
+  if severity ~= "" and not vim.tbl_contains({ "high", "medium", "low", "info" }, severity) then
     utils.error("Invalid severity. Must be: high, medium, low, or info")
     return
   end
@@ -529,7 +532,7 @@ function M.open_edit_note_window(note)
   -- Position cursor at comment section (find the line dynamically)
   local comment_line = 1
   for i, line in ipairs(lines) do
-    if line == note.comment and i > 1 and lines[i-1]:match("^## Comment") then
+    if line == note.comment and i > 1 and lines[i - 1]:match("^## Comment") then
       comment_line = i
       break
     end
@@ -621,9 +624,17 @@ function M.delete_note_with_confirmation(note)
   end
 
   local confirm_result = vim.fn.confirm(
-    "Delete note by " .. note.author .. "?\n" ..
-    "File: " .. note.file_path .. ":" .. note.line_number .. "\n\n" ..
-    "Comment: " .. note.comment:sub(1, 100) .. (#note.comment > 100 and "..." or ""),
+    "Delete note by "
+      .. note.author
+      .. "?\n"
+      .. "File: "
+      .. note.file_path
+      .. ":"
+      .. note.line_number
+      .. "\n\n"
+      .. "Comment: "
+      .. note.comment:sub(1, 100)
+      .. (#note.comment > 100 and "..." or ""),
     "&Yes\n&No",
     2,
     "Question"
@@ -668,7 +679,7 @@ function M.delete_current_file_notes_with_confirmation()
     "This will delete " .. #deletable_notes .. " of " .. #notes .. " total notes (only your notes will be deleted)",
     "",
     "Notes to be deleted:",
-    "──────────────────────────────────────────────────────"
+    "──────────────────────────────────────────────────────",
   }
 
   -- Add details for each note to be deleted
@@ -685,16 +696,14 @@ function M.delete_current_file_notes_with_confirmation()
     end
   end
 
-  table.insert(confirm_lines, "──────────────────────────────────────────────────────")
+  table.insert(
+    confirm_lines,
+    "──────────────────────────────────────────────────────"
+  )
 
   local confirm_message = table.concat(confirm_lines, "\n")
 
-  local confirm_result = vim.fn.confirm(
-    confirm_message,
-    "&Yes\n&No",
-    2,
-    "Question"
-  )
+  local confirm_result = vim.fn.confirm(confirm_message, "&Yes\n&No", 2, "Question")
 
   if confirm_result == 1 then -- Yes
     local deleted_count = 0
@@ -841,7 +850,7 @@ function M.open_reply_window(note)
   local reply_line = 1
   for i, line in ipairs(lines) do
     if line == "## Your Reply" then
-      reply_line = i + 1  -- Position cursor on the line after "## Your Reply"
+      reply_line = i + 1 -- Position cursor on the line after "## Your Reply"
       break
     end
   end
@@ -984,20 +993,29 @@ function M.show_notes_window(notes, title)
 
       for j, reply in ipairs(sorted_replies) do
         -- Add separator line (BBS style)
-        table.insert(lines, "────────────────────────────────────────────────────────────────────────────────")
+        table.insert(
+          lines,
+          "────────────────────────────────────────────────────────────────────────────────"
+        )
         table.insert(lines, "From: " .. reply.author .. " | Date: " .. reply.timestamp)
         table.insert(lines, "")
         table.insert(lines, reply.comment)
         table.insert(lines, "")
       end
 
-      table.insert(lines, "────────────────────────────────────────────────────────────────────────────────")
+      table.insert(
+        lines,
+        "────────────────────────────────────────────────────────────────────────────────"
+      )
       table.insert(lines, "End of thread")
     end
 
     if i < #notes then
       table.insert(lines, "")
-      table.insert(lines, "═══════════════════════════════════════════════════════════════════════════════")
+      table.insert(
+        lines,
+        "═══════════════════════════════════════════════════════════════════════════════"
+      )
       table.insert(lines, "")
     end
   end

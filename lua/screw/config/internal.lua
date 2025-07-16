@@ -137,7 +137,10 @@ local function validate_config_structure(config)
 
   -- Check for unknown keys in main config
   for key in pairs(config) do
-    if not allowed_keys[key] and not vim.tbl_contains({ "storage", "ui", "collaboration", "export", "import", "signs" }, key) then
+    if
+      not allowed_keys[key]
+      and not vim.tbl_contains({ "storage", "ui", "collaboration", "export", "import", "signs" }, key)
+    then
       return false, string.format("Unknown configuration key: '%s'", key)
     end
   end
@@ -182,7 +185,14 @@ local function validate_config_values(config)
   local validations = {
     -- Storage validations
     { "storage", "table", config.storage },
-    { "storage.backend", function(v) return vim.tbl_contains({ "json", "sqlite" }, v) end, config.storage.backend, "must be 'json' or 'sqlite'" },
+    {
+      "storage.backend",
+      function(v)
+        return vim.tbl_contains({ "json", "sqlite" }, v)
+      end,
+      config.storage.backend,
+      "must be 'json' or 'sqlite'",
+    },
     { "storage.path", "string", config.storage.path },
     { "storage.filename", "string", config.storage.filename },
     { "storage.auto_save", "boolean", config.storage.auto_save },
@@ -192,7 +202,14 @@ local function validate_config_values(config)
     { "ui.float_window", "table", config.ui.float_window },
     { "ui.float_window.width", { "number", "string" }, config.ui.float_window.width },
     { "ui.float_window.height", { "number", "string" }, config.ui.float_window.height },
-    { "ui.float_window.border", function(v) return vim.tbl_contains({ "none", "single", "double", "rounded", "solid", "shadow" }, v) end, config.ui.float_window.border, "must be valid border style" },
+    {
+      "ui.float_window.border",
+      function(v)
+        return vim.tbl_contains({ "none", "single", "double", "rounded", "solid", "shadow" }, v)
+      end,
+      config.ui.float_window.border,
+      "must be valid border style",
+    },
     { "ui.float_window.winblend", "number", config.ui.float_window.winblend },
     { "ui.highlights", "table", config.ui.highlights },
     { "ui.highlights.note_marker", "string", config.ui.highlights.note_marker },
@@ -210,7 +227,14 @@ local function validate_config_values(config)
 
     -- Export validations
     { "export", "table", config.export },
-    { "export.default_format", function(v) return vim.tbl_contains({ "markdown", "json", "csv" }, v) end, config.export.default_format, "must be 'markdown', 'json', or 'csv'" },
+    {
+      "export.default_format",
+      function(v)
+        return vim.tbl_contains({ "markdown", "json", "csv" }, v)
+      end,
+      config.export.default_format,
+      "must be 'markdown', 'json', or 'csv'",
+    },
     { "export.output_dir", "string", config.export.output_dir },
 
     -- Import validations
@@ -252,7 +276,13 @@ local function validate_config_values(config)
         end
       end
       if not valid then
-        return false, string.format("Invalid type for '%s': expected %s, got %s", name, table.concat(validator, " or "), type(value))
+        return false,
+          string.format(
+            "Invalid type for '%s': expected %s, got %s",
+            name,
+            table.concat(validator, " or "),
+            type(value)
+          )
       end
     elseif type(validator) == "function" then
       if not validator(value) then
