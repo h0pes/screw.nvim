@@ -95,6 +95,9 @@ ignore = {
   "631",  -- line too long
   "212",  -- unused argument
   "213",  -- unused loop variable
+  "561",  -- cyclomatic complexity too high
+  "431",  -- shadowing upvalue
+  "411",  -- variable was previously defined
 }
 
 -- Exclude certain directories

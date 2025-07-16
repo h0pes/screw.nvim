@@ -39,7 +39,7 @@ jobs:
       
       - name: Run linter
         run: |
-          luacheck lua/ --globals vim --read-globals-from-config
+          luacheck lua/ --globals vim
       
       - name: Run tests
         run: |
@@ -76,7 +76,7 @@ jobs:
         run: luarocks install luacheck
       
       - name: Run luacheck
-        run: luacheck lua/ --globals vim --read-globals-from-config
+        run: luacheck lua/ --globals vim
 
   stylua:
     runs-on: ubuntu-latest
