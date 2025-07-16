@@ -1,40 +1,17 @@
---- Run the is file before you run unittests to download any extra dependencies.
+--- Test initialization for screw.nvim
 
-local _PLUGINS = {
-  ["https://github.com/h0pes/mega.cmdparse"] = os.getenv("MEGA_CMDPARSE_DIR") or "/tmp/mega.cmdparse",
-  ["https://github.com/h0pes/mega.logging"] = os.getenv("MEGA_LOGGING_DIR") or "/tmp/mega.logging",
+-- Add current directory to Lua path
+package.path = package.path .. ";lua/?.lua;lua/?/init.lua"
 
-  ["https://github.com/nvim-lualine/lualine.nvim"] = os.getenv("LUALINE_DIR") or "/tmp/lualine.nvim",
+-- Use the spec_helper for consistent vim mocking
+require("spec.spec_helper")
 
-  ["https://github.com/nvim-telescope/telescope.nvim"] = os.getenv("TELESCOPE_DIR") or "/tmp/telescope.nvim",
-  -- IMPORTANT: Needed to prevent error:
-  -- `telescope.nvim/lua/telescope/config.lua:1: module 'plenary.strings' not found`
-  --
-  ["https://github.com/nvim-lua/plenary.nvim"] = os.getenv("PLENARY_NVIM_DIR") or "/tmp/plenary.nvim",
-}
-
-local cloned = false
-
-for url, directory in pairs(_PLUGINS) do
-  if vim.fn.isdirectory(directory) ~= 1 then
-    print(string.format('Cloning "%s" plug-in to "%s" path.', url, directory))
-
-    vim.fn.system({ "git", "clone", url, directory })
-
-    cloned = true
-  end
-
-  vim.opt.rtp:append(directory)
-end
-
-if cloned then
-  print("Finished cloning.")
-end
-
-vim.opt.rtp:append(".")
-
-vim.cmd("runtime plugin/screw.lua")
-
-require("lualine").setup()
-
-require("screw._core.configuration").initialize_data_if_needed()
+-- Initialize screw plugin for testing with minimal config
+local screw_config = require("screw.config")
+screw_config.setup({
+  storage = {
+    backend = "json",
+    path = "/tmp/screw_test",
+    filename = "test_notes.json"
+  }
+})

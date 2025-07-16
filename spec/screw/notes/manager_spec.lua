@@ -6,10 +6,9 @@ describe("screw.notes.manager", function()
 
   before_each(function()
     helpers.setup_test_env()
-    manager = require("screw.notes.manager")
     mock_note = helpers.create_mock_note()
 
-    -- Mock storage
+    -- Mock storage BEFORE requiring manager
     package.loaded["screw.notes.storage"] = {
       setup = function() end,
       save_note = function()
@@ -31,6 +30,32 @@ describe("screw.notes.manager", function()
         return { mock_note }
       end,
     }
+    
+    -- Also mock the storage init module
+    package.loaded["screw.notes.storage.init"] = {
+      setup = function() end,
+      save_note = function()
+        return true
+      end,
+      get_all_notes = function()
+        return { mock_note }
+      end,
+      get_note = function()
+        return mock_note
+      end,
+      delete_note = function()
+        return true
+      end,
+      get_notes_for_file = function()
+        return { mock_note }
+      end,
+      get_notes_for_line = function()
+        return { mock_note }
+      end,
+    }
+    
+    -- Now require manager after mocking storage
+    manager = require("screw.notes.manager")
   end)
 
   after_each(function()

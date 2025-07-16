@@ -1,8 +1,107 @@
 -- Test helper functions for screw.nvim
 local helpers = {}
 
--- Mock vim global for testing
+-- Mock vim global for testing with extended functions
 _G.vim = {
+  g = {},
+  v = {},
+  opt = {
+    rtp = {
+      append = function() end,
+    },
+  },
+  cmd = function() end,
+  health = {
+    error = function(msg) print("Health error: " .. msg) end,
+    warn = function(msg) print("Health warn: " .. msg) end,
+    info = function(msg) print("Health info: " .. msg) end,
+    ok = function(msg) print("Health ok: " .. msg) end,
+  },
+  log = {
+    levels = {
+      ERROR = 1,
+      WARN = 2,
+      INFO = 3,
+      DEBUG = 4,
+    },
+  },
+  loop = {
+    new_timer = function() return {} end,
+  },
+  api = {
+    nvim_create_autocmd = function() end,
+    nvim_create_user_command = function() end,
+  },
+  tbl_contains = function(table, value)
+    for _, item in ipairs(table) do
+      if item == value then
+        return true
+      end
+    end
+    return false
+  end,
+  tbl_deep_extend = function(behavior, ...)
+    local result = {}
+    local function deep_extend(dst, src)
+      for k, v in pairs(src) do
+        if type(v) == "table" and type(dst[k]) == "table" then
+          dst[k] = deep_extend(dst[k], v)
+        else
+          dst[k] = v
+        end
+      end
+      return dst
+    end
+    
+    for i = 1, select("#", ...) do
+      local tbl = select(i, ...)
+      if tbl then
+        result = deep_extend(result, tbl)
+      end
+    end
+    return result
+  end,
+  split = function(str, delimiter)
+    if not str or not delimiter then
+      return {}
+    end
+    local result = {}
+    local pattern = "(.-)" .. delimiter
+    local last_pos = 1
+    for part in str:gmatch(pattern) do
+      table.insert(result, part)
+      last_pos = last_pos + #part + #delimiter
+    end
+    table.insert(result, str:sub(last_pos))
+    return result
+  end,
+  tbl_isempty = function(t)
+    return next(t) == nil
+  end,
+  inspect = function(obj)
+    if type(obj) == "table" then
+      local str = "{"
+      for k, v in pairs(obj) do
+        str = str .. tostring(k) .. "=" .. tostring(v) .. ", "
+      end
+      str = str:sub(1, -3) .. "}"
+      return str
+    else
+      return tostring(obj)
+    end
+  end,
+  deepcopy = function(orig)
+    local copy
+    if type(orig) == 'table' then
+      copy = {}
+      for k, v in pairs(orig) do
+        copy[k] = vim.deepcopy(v)
+      end
+    else
+      copy = orig
+    end
+    return copy
+  end,
   fn = {
     stdpath = function(type)
       if type == "data" then
@@ -137,22 +236,16 @@ _G.vim = {
   },
   json = {
     encode = function(obj)
-      -- Simple JSON encoding for tests - return valid JSON with expected structure
-      if type(obj) == "table" and obj.version == "2.1.0" then
-        return '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"screw.nvim"}},"results":[]}]}'
-      end
-      return "{}"
+      -- Store the encoded object for decode to use - this is the simplest approach
+      _G._test_encoded_obj = obj
+      -- Return a simple JSON string for logging/debugging
+      return '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"screw.nvim"}},"results":[]}]}'
     end,
     decode = function(str)
-      -- Simple JSON parsing for tests - return the structure the tests expect
-      if str:find('"version":"2.1.0"') then
-        return {
-          version = "2.1.0",
-          runs = { {
-            tool = { driver = { name = "screw.nvim" } },
-            results = {},
-          } },
-        }
+      -- Return the actual object that was passed to encode
+      -- This bypasses all JSON parsing complexities and gives tests the real structure
+      if _G._test_encoded_obj and _G._test_encoded_obj.version == "2.1.0" then
+        return _G._test_encoded_obj
       end
       return {}
     end,
@@ -239,8 +332,9 @@ end
 -- Helper to clean up test files
 function helpers.cleanup_test_files()
   -- In real tests, this would clean up any test files
-  -- For now, just reset vim.g
+  -- For now, just reset vim.g and test state
   vim.g = {}
+  _G._test_encoded_obj = nil
 end
 
 -- Helper to setup test environment
@@ -252,6 +346,16 @@ function helpers.setup_test_env()
   package.loaded["screw.utils"] = nil
   package.loaded["screw.notes.manager"] = nil
   package.loaded["screw.notes.storage"] = nil
+  
+  -- Reinitialize configuration for tests
+  local screw_config = require("screw.config")
+  screw_config.setup({
+    storage = {
+      backend = "json",
+      path = "/tmp/screw_test",
+      filename = "test_notes.json"
+    }
+  })
 end
 
 return helpers

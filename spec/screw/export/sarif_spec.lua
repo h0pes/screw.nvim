@@ -57,9 +57,10 @@ describe("screw.export.sarif", function()
 
     it("should handle notes without CWE", function()
       local note = helpers.create_mock_note({
-        cwe = nil,
         state = "todo",
       })
+      -- Explicitly set cwe to nil after creation
+      note.cwe = nil
       local notes = { note }
       local options = { include_replies = true }
 

@@ -1,17 +1,15 @@
 return {
+  _all = {
+    coverage = false,
+    lpath = "lua/?.lua;lua/?/init.lua;spec/?.lua"
+  },
   default = {
-    ROOT = {"."},
-    ["exclude-tags"] = {"slow"},
+    helper = "./spec/minimal_init.lua",
     verbose = true,
-    coverage = false,  -- Disable coverage for now
-    ["coverage-config"] = ".luacov",
-    lpath = "./lua/?.lua;./lua/?/init.lua"
+    ["exclude-tags"] = {"slow"}
   },
   slow = {
-    ROOT = {"."},
-    verbose = true,
-    coverage = false,  -- Disable coverage for now
-    ["coverage-config"] = ".luacov",
-    lpath = "./lua/?.lua;./lua/?/init.lua"
+    helper = "./spec/minimal_init.lua",
+    verbose = true
   }
 }
