@@ -86,7 +86,7 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Setup stylua
-        uses: JohnnyMorganz/stylua-action@v3
+        uses: JohnnyMorganz/stylua-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
