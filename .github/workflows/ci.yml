@@ -29,7 +29,7 @@ jobs:
           luaVersion: "5.1"
       
       - name: Setup LuaRocks
-        uses: leafo/gh-actions-luarocks@v4
+        uses: leafo/gh-actions-luarocks@v5
       
       - name: Install dependencies
         run: |
@@ -70,7 +70,7 @@ jobs:
           luaVersion: "5.1"
       
       - name: Setup LuaRocks
-        uses: leafo/gh-actions-luarocks@v4
+        uses: leafo/gh-actions-luarocks@v5
       
       - name: Install luacheck
         run: luarocks install luacheck
