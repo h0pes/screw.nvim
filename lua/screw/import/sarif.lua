@@ -365,6 +365,8 @@ function M.import(file_path, options)
       }
 
       for _, sarif_result in ipairs(run.results) do
+        local should_continue = false
+
         -- Apply file filter if specified
         if options.file_filter then
           local location = sarif_result.locations and sarif_result.locations[1]
@@ -382,64 +384,68 @@ function M.import(file_path, options)
 
             if should_skip then
               result.skipped_count = result.skipped_count + 1
-              goto continue_outer
+              should_continue = true
             end
           end
         end
 
-        -- Convert SARIF result to note
-        local note = convert_sarif_result_to_note(
-          sarif_result,
-          run.tool and run.tool.driver and run.tool.driver.rules,
-          run.tool and run.tool.driver or {},
-          import_metadata
-        )
+        if not should_continue then
+          -- Convert SARIF result to note
+          local note = convert_sarif_result_to_note(
+            sarif_result,
+            run.tool and run.tool.driver and run.tool.driver.rules,
+            run.tool and run.tool.driver or {},
+            import_metadata
+          )
 
-        if not note then
-          result.error_count = result.error_count + 1
-          table.insert(result.errors, "Failed to convert SARIF result to note")
-          goto continue_outer
-        end
+          if not note then
+            result.error_count = result.error_count + 1
+            table.insert(result.errors, "Failed to convert SARIF result to note")
+            should_continue = true
+          end
 
-        -- Check for collisions (including exact duplicates by ID)
-        local collision_type, existing_note = detect_collision(note, existing_notes)
+          if not should_continue then
+            -- Check for collisions (including exact duplicates by ID)
+            local collision_type, existing_note = detect_collision(note, existing_notes)
 
-        -- Also check for exact ID duplicates (prevent importing the same note twice)
-        local duplicate_found = false
-        for _, existing in ipairs(existing_notes) do
-          if existing.id == note.id then
-            duplicate_found = true
-            break
+            -- Also check for exact ID duplicates (prevent importing the same note twice)
+            local duplicate_found = false
+            for _, existing in ipairs(existing_notes) do
+              if existing.id == note.id then
+                duplicate_found = true
+                break
+              end
+            end
+
+            if duplicate_found then
+              result.skipped_count = result.skipped_count + 1
+              should_continue = true
+            end
+
+            if not should_continue and collision_type ~= "none" then
+              result.collision_count = result.collision_count + 1
+              local should_import =
+                handle_collision(collision_type, note, existing_note, options.collision_strategy or "ask")
+
+              if not should_import then
+                result.skipped_count = result.skipped_count + 1
+                should_continue = true
+              end
+            end
+
+            if not should_continue then
+              -- Import the note
+              local save_success = storage.save_note(note)
+              if save_success then
+                result.imported_count = result.imported_count + 1
+                -- Note: existing_notes is already updated by save_note since it's the same reference
+              else
+                result.error_count = result.error_count + 1
+                table.insert(result.errors, "Failed to create note for " .. note.file_path .. ":" .. note.line_number)
+              end
+            end
           end
         end
-
-        if duplicate_found then
-          result.skipped_count = result.skipped_count + 1
-          goto continue_outer
-        end
-
-        if collision_type ~= "none" then
-          result.collision_count = result.collision_count + 1
-          local should_import =
-            handle_collision(collision_type, note, existing_note, options.collision_strategy or "ask")
-
-          if not should_import then
-            result.skipped_count = result.skipped_count + 1
-            goto continue_outer
-          end
-        end
-
-        -- Import the note
-        local save_success = storage.save_note(note)
-        if save_success then
-          result.imported_count = result.imported_count + 1
-          -- Note: existing_notes is already updated by save_note since it's the same reference
-        else
-          result.error_count = result.error_count + 1
-          table.insert(result.errors, "Failed to create note for " .. note.file_path .. ":" .. note.line_number)
-        end
-
-        ::continue_outer::
       end
     end
   end
