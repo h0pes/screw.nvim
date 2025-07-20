@@ -29,8 +29,10 @@ local function screw_command(opts)
         screw.delete_note()
       elseif scope == "file" then
         screw.delete_current_file_notes()
+      elseif scope == "project" then
+        screw.delete_all_project_notes()
       else
-        vim.api.nvim_err_writeln("Invalid delete scope: " .. scope .. ". Use: line or file")
+        vim.api.nvim_err_writeln("Invalid delete scope: " .. scope .. ". Use: line, file, or project")
       end
     elseif action == "reply" then
       screw.reply_to_note()
@@ -60,16 +62,23 @@ local function screw_command(opts)
     
     screw.export_notes(options)
   elseif subcommand == "import" then
-    local tool = args[1]
+    local format = args[1]
     local input_path = args[2]
     
-    if not tool or not input_path then
-      vim.api.nvim_err_writeln("Usage: :Screw import <tool> <input_path>")
+    if not format or not input_path then
+      vim.api.nvim_err_writeln("Usage: :Screw import <format> <input_path>")
+      vim.api.nvim_err_writeln("Supported formats: sarif")
+      return
+    end
+    
+    if format ~= "sarif" then
+      vim.api.nvim_err_writeln("Unsupported import format: " .. format)
+      vim.api.nvim_err_writeln("Currently supported: sarif")
       return
     end
     
     local options = {
-      tool = tool,
+      format = format,
       input_path = input_path,
     }
     
@@ -228,7 +237,7 @@ local function screw_complete(arg_lead, cmd_line, cursor_pos)
         return matches
       elseif num_args == 3 and args[2] == "delete" then
         -- Complete delete scopes
-        local scopes = { "line", "file" }
+        local scopes = { "line", "file", "project" }
         local matches = {}
         
         for _, scope in ipairs(scopes) do
@@ -257,12 +266,12 @@ local function screw_complete(arg_lead, cmd_line, cursor_pos)
       end
     elseif subcommand == "import" then
       if num_args == 2 then
-        local tools = { "semgrep", "bandit", "gosec", "sonarqube" }
+        local formats = { "sarif" }
         local matches = {}
         
-        for _, tool in ipairs(tools) do
-          if tool:sub(1, #arg_lead) == arg_lead then
-            table.insert(matches, tool)
+        for _, format in ipairs(formats) do
+          if format:sub(1, #arg_lead) == arg_lead then
+            table.insert(matches, format)
           end
         end
         
@@ -284,19 +293,11 @@ local function screw_complete(arg_lead, cmd_line, cursor_pos)
         
         return matches
       elseif num_args >= 3 then
-        -- Complete keywords - get all available keywords from configuration
-        local screw = require("screw")
-        local config = screw.get_config()
-        local all_keywords = {}
-        
-        for state, keywords in pairs(config.signs.keywords) do
-          for _, keyword in ipairs(keywords) do
-            table.insert(all_keywords, keyword)
-          end
-        end
-        
+        -- Complete keywords - return common security terms without initializing plugin
+        local common_keywords = { "auth", "crypto", "sql", "xss", "csrf", "injection", "validation", "sanitize" }
         local matches = {}
-        for _, keyword in ipairs(all_keywords) do
+        
+        for _, keyword in ipairs(common_keywords) do
           if keyword:upper():sub(1, #arg_lead:upper()) == arg_lead:upper() then
             table.insert(matches, keyword)
           end

@@ -12,10 +12,18 @@ _G.vim = {
   },
   cmd = function() end,
   health = {
-    error = function(msg) print("Health error: " .. msg) end,
-    warn = function(msg) print("Health warn: " .. msg) end,
-    info = function(msg) print("Health info: " .. msg) end,
-    ok = function(msg) print("Health ok: " .. msg) end,
+    error = function(msg)
+      print("Health error: " .. msg)
+    end,
+    warn = function(msg)
+      print("Health warn: " .. msg)
+    end,
+    info = function(msg)
+      print("Health info: " .. msg)
+    end,
+    ok = function(msg)
+      print("Health ok: " .. msg)
+    end,
   },
   log = {
     levels = {
@@ -26,7 +34,9 @@ _G.vim = {
     },
   },
   loop = {
-    new_timer = function() return {} end,
+    new_timer = function()
+      return {}
+    end,
   },
   api = {
     nvim_create_autocmd = function() end,
@@ -52,7 +62,7 @@ _G.vim = {
       end
       return dst
     end
-    
+
     for i = 1, select("#", ...) do
       local tbl = select(i, ...)
       if tbl then
@@ -92,7 +102,7 @@ _G.vim = {
   end,
   deepcopy = function(orig)
     local copy
-    if type(orig) == 'table' then
+    if type(orig) == "table" then
       copy = {}
       for k, v in pairs(orig) do
         copy[k] = vim.deepcopy(v)
@@ -121,6 +131,14 @@ _G.vim = {
         return path:match("(.*/)")
       elseif mods == ":t" then
         return path:match("([^/]+)$")
+      elseif mods == ":~:." then
+        -- Convert absolute path to relative path from current working directory
+        local cwd = vim.fn.getcwd()
+        if path:sub(1, #cwd) == cwd then
+          local relative = path:sub(#cwd + 2) -- +2 to skip the trailing slash
+          return relative
+        end
+        return path
       end
       return path
     end,
@@ -158,6 +176,9 @@ _G.vim = {
       return "test_input"
     end,
     isdirectory = function(path)
+      return 1 -- Always return true for tests
+    end,
+    filereadable = function(path)
       return 1 -- Always return true for tests
     end,
   },
@@ -346,15 +367,51 @@ function helpers.setup_test_env()
   package.loaded["screw.utils"] = nil
   package.loaded["screw.notes.manager"] = nil
   package.loaded["screw.notes.storage"] = nil
-  
+  package.loaded["screw.import.sarif"] = nil
+  package.loaded["screw.import.init"] = nil
+
+  -- Create mock storage module that will be used by imports
+  local mock_backend = {
+    config = {
+      auto_save = true,
+    },
+    save_note = function(note)
+      return true
+    end,
+    get_all_notes = function()
+      return {}
+    end,
+    force_save = function()
+      return true
+    end,
+  }
+
+  package.loaded["screw.notes.storage"] = {
+    get_all_notes = function()
+      return {}
+    end,
+    save_note = function(note)
+      return true
+    end,
+    get_storage_stats = function()
+      return {}
+    end,
+    force_save = function()
+      return true
+    end,
+    get_backend = function()
+      return mock_backend
+    end,
+  }
+
   -- Reinitialize configuration for tests
   local screw_config = require("screw.config")
   screw_config.setup({
     storage = {
       backend = "json",
       path = "/tmp/screw_test",
-      filename = "test_notes.json"
-    }
+      filename = "test_notes.json",
+    },
   })
 end
 

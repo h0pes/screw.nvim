@@ -160,6 +160,13 @@ function M.delete_current_file_notes()
   notes_ui.delete_current_file_notes_with_confirmation()
 end
 
+--- Delete all notes in project (with confirmation)
+function M.delete_all_project_notes()
+  ensure_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.delete_all_project_notes_with_confirmation()
+end
+
 --- Delete a note by ID (for programmatic use)
 ---@param id string
 ---@return boolean
@@ -196,13 +203,13 @@ function M.export_notes(options)
   return export_module.export_notes(options)
 end
 
---- Import notes from SAST tools
+--- Import security findings from SARIF files
 ---@param options ScrewImportOptions
----@return boolean
+---@return ScrewImportResult
 function M.import_notes(options)
   ensure_initialized()
   local import_module = require("screw.import.init")
-  return import_module.import_notes(options)
+  return import_module.import_sarif(options)
 end
 
 --- Get plugin statistics
@@ -233,6 +240,36 @@ function M.get_config()
   ensure_initialized()
   local config = require("screw.config")
   return config.get()
+end
+
+--- Remove duplicate notes (useful after multiple imports)
+---@return table result with removed_count and remaining_count
+function M.deduplicate_notes()
+  ensure_initialized()
+  local storage = require("screw.notes.storage")
+  local all_notes = storage.get_all_notes()
+
+  local unique_notes = {}
+  local seen_ids = {}
+  local removed_count = 0
+
+  for _, note in ipairs(all_notes) do
+    if seen_ids[note.id] then
+      removed_count = removed_count + 1
+    else
+      seen_ids[note.id] = true
+      table.insert(unique_notes, note)
+    end
+  end
+
+  -- Save deduplicated notes
+  storage.replace_all_notes(unique_notes)
+
+  return {
+    removed_count = removed_count,
+    remaining_count = #unique_notes,
+    success = true,
+  }
 end
 
 --- Jump to next security note in current buffer

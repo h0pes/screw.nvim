@@ -44,8 +44,14 @@
 ---@field output_dir? string Output directory for exports (defaults to project root)
 
 ---@class screw.ImportConfig
----@field supported_tools? string[] List of supported SAST tools
+---@field sarif? screw.SarifImportConfig SARIF import configuration
 ---@field auto_map_cwe? boolean Auto-map tool findings to CWE (default: true)
+
+---@class screw.SarifImportConfig
+---@field collision_strategy? "ask"|"skip"|"overwrite"|"merge" How to handle collisions (default: "ask")
+---@field default_author? string Default author for imported notes (default: "sarif-import")
+---@field preserve_metadata? boolean Store import metadata (default: true)
+---@field show_progress? boolean Show progress for large imports (default: false)
 
 ---@class screw.SignsConfig
 ---@field enabled? boolean Enable signs in signcolumn (default: true)
@@ -58,11 +64,17 @@
 ---@field vulnerable? string Icon for vulnerable notes (default: "🔴")
 ---@field not_vulnerable? string Icon for not vulnerable notes (default: "✅")
 ---@field todo? string Icon for todo notes (default: "📝")
+---@field vulnerable_imported? string Icon for imported vulnerable notes (default: "🔺")
+---@field not_vulnerable_imported? string Icon for imported not vulnerable notes (default: "☑️")
+---@field todo_imported? string Icon for imported todo notes (default: "📋")
 
 ---@class screw.SignColorsConfig
 ---@field vulnerable? string Color for vulnerable signs (default: "#f87171")
 ---@field not_vulnerable? string Color for not vulnerable signs (default: "#34d399")
 ---@field todo? string Color for todo signs (default: "#fbbf24")
+---@field vulnerable_imported? string Color for imported vulnerable signs (default: "#dc2626")
+---@field not_vulnerable_imported? string Color for imported not vulnerable signs (default: "#16a34a")
+---@field todo_imported? string Color for imported todo signs (default: "#d97706")
 
 ---@class screw.SignKeywordsConfig
 ---@field vulnerable? string[] Keywords for vulnerable notes (default: {"VULNERABLE", "SECURITY", "EXPLOIT"})

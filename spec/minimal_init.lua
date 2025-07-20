@@ -12,6 +12,6 @@ screw_config.setup({
   storage = {
     backend = "json",
     path = "/tmp/screw_test",
-    filename = "test_notes.json"
-  }
+    filename = "test_notes.json",
+  },
 })

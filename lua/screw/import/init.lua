@@ -1,105 +1,64 @@
 --- Import functionality for screw.nvim
 ---
---- This module handles importing notes from SAST tools.
+--- This module handles importing security findings from SARIF files.
 ---
 
 local utils = require("screw.utils")
--- local config = require("screw.config")
 
 local M = {}
 
---- Import notes from SAST tools
+--- Import security findings from SARIF file
 ---@param options ScrewImportOptions
----@return boolean
-function M.import_notes(options)
+---@return ScrewImportResult
+function M.import_sarif(options)
   -- Validate options
-  if not options or not options.tool or not options.input_path then
-    utils.error("Tool and input path are required for import")
-    return false
+  local valid, error_msg = M.validate_options(options)
+  if not valid then
+    local result = {
+      success = false,
+      total_findings = 0,
+      imported_count = 0,
+      skipped_count = 0,
+      collision_count = 0,
+      error_count = 1,
+      tool_name = "Unknown",
+      sarif_file_path = options.input_path or "",
+      errors = { error_msg },
+    }
+    return result
   end
 
   -- Ensure input path is absolute and check if file exists
   local input_path = utils.get_absolute_path(options.input_path)
   if not utils.file_exists(input_path) then
-    utils.error("Input file does not exist: " .. input_path)
-    return false
+    local result = {
+      success = false,
+      total_findings = 0,
+      imported_count = 0,
+      skipped_count = 0,
+      collision_count = 0,
+      error_count = 1,
+      tool_name = "Unknown",
+      sarif_file_path = input_path,
+      errors = { "Input file does not exist: " .. input_path },
+    }
+    return result
   end
 
-  -- Load appropriate importer
-  local importer_module = "screw.import." .. options.tool
-  local has_importer, importer = pcall(require, importer_module)
+  -- Use SARIF importer
+  local sarif_importer = require("screw.import.sarif")
+  local result = sarif_importer.import(input_path, options)
 
-  if not has_importer then
-    utils.error("Unsupported import tool: " .. options.tool)
-    return false
-  end
+  -- Show results to user
+  sarif_importer.show_import_results(result)
 
-  -- Read input file
-  local content = utils.read_file(input_path)
-  if not content then
-    utils.error("Failed to read input file: " .. input_path)
-    return false
-  end
-
-  -- Parse content
-  local notes = importer.parse(content, options)
-  if not notes or #notes == 0 then
-    utils.warn("No notes found in input file")
-    return false
-  end
-
-  -- Import notes using notes manager
-  local notes_manager = require("screw.notes.manager")
-  local imported_count = 0
-
-  for _, note_data in ipairs(notes) do
-    -- Set default author if not provided
-    if not note_data.author then
-      note_data.author = options.author or utils.get_author()
-    end
-
-    -- Auto-classify if requested
-    if options.auto_classify then
-      note_data.state = M.auto_classify_state(note_data)
-    end
-
-    -- Create note
-    if notes_manager.create_note(note_data) then
-      imported_count = imported_count + 1
-    end
-  end
-
-  if imported_count > 0 then
-    utils.info(string.format("Successfully imported %d notes from %s", imported_count, options.tool))
-    return true
-  else
-    utils.error("Failed to import any notes")
-    return false
-  end
+  return result
 end
 
---- Auto-classify vulnerability state based on note data
----@param note_data table
----@return string
-function M.auto_classify_state(note_data)
-  -- Default classification logic
-  if note_data.severity then
-    local severity = note_data.severity:lower()
-    if severity == "high" or severity == "critical" then
-      return "vulnerable"
-    elseif severity == "low" or severity == "info" then
-      return "not_vulnerable"
-    end
-  end
-
-  -- Default to todo for manual review
-  return "todo"
-end
-
---- Get list of supported import tools
+--- Get list of supported import formats
 ---@return string[]
-function M.get_supported_tools()
-  return { "semgrep", "bandit", "gosec", "sonarqube" }
+function M.get_supported_formats()
+  return { "sarif" }
 end
 
 --- Validate import options
@@ -110,21 +69,29 @@ function M.validate_options(options)
     return false, "Options table is required"
   end
 
-  if not options.tool then
-    return false, "Tool is required"
+  if not options.format then
+    return false, "Format is required"
   end
 
   if not options.input_path then
     return false, "Input path is required"
   end
 
-  local supported_tools = M.get_supported_tools()
-  if not vim.tbl_contains(supported_tools, options.tool) then
-    return false, "Unsupported tool: " .. options.tool .. ". Supported: " .. table.concat(supported_tools, ", ")
+  local supported_formats = M.get_supported_formats()
+  if not vim.tbl_contains(supported_formats, options.format) then
+    return false, "Unsupported format: " .. options.format .. ". Supported: " .. table.concat(supported_formats, ", ")
   end
 
   if type(options.input_path) ~= "string" then
     return false, "Input path must be a string"
+  end
+
+  -- Validate collision strategy
+  if options.collision_strategy then
+    local valid_strategies = { "ask", "skip", "overwrite", "merge" }
+    if not vim.tbl_contains(valid_strategies, options.collision_strategy) then
+      return false, "Invalid collision strategy: " .. options.collision_strategy
+    end
   end
 
   return true

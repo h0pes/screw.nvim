@@ -30,7 +30,7 @@ describe("screw.notes.manager", function()
         return { mock_note }
       end,
     }
-    
+
     -- Also mock the storage init module
     package.loaded["screw.notes.storage.init"] = {
       setup = function() end,
@@ -53,7 +53,7 @@ describe("screw.notes.manager", function()
         return { mock_note }
       end,
     }
-    
+
     -- Now require manager after mocking storage
     manager = require("screw.notes.manager")
   end)

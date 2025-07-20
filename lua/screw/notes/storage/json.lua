@@ -284,6 +284,20 @@ function M.new(config)
     return stats
   end
 
+  --- Replace all notes with new set
+  ---@param notes ScrewNote[]
+  ---@return boolean
+  function backend:replace_all_notes(notes)
+    self.notes = utils.deep_copy(notes or {})
+
+    -- Auto-save if enabled
+    if self.config.auto_save then
+      return self:save_notes()
+    end
+
+    return true
+  end
+
   return backend
 end
 

@@ -6,9 +6,7 @@
 [![Lua](https://img.shields.io/badge/lua-%232C2D72.svg?style=for-the-badge&logo=lua&logoColor=white)](https://www.lua.org/)
 [![Security](https://img.shields.io/badge/Security-Critical-red?style=for-the-badge&logo=security&logoColor=white)](https://owasp.org/)
 
-[![Issues](https://img.shields.io/github/issues/h0pes/screw.nvim?style=flat-square)](https://github.com/h0pes/screw.nvim/issues)
-[![License](https://img.shields.io/github/license/h0pes/screw.nvim?style=flat-square)](https://github.com/h0pes/screw.nvim/blob/main/LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/h0pes/screw.nvim/ci.yml?style=flat-square)](https://github.com/h0pes/screw.nvim/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://github.com/h0pes/screw.nvim/blob/main/LICENSE)
 
 ---
 
@@ -45,61 +43,26 @@ By default, security notes are stored in timestamped files (e.g., `screw_notes_2
 
 ### lazy.nvim
 
-<details>
-<summary>Click to expand lazy.nvim configuration</summary>
-
 ```lua
--- Minimal setup (plugin works out of the box)
 {
   "h0pes/screw.nvim",
   version = "^1", -- Recommended: pin to major version
   cmd = "Screw", -- Lazy-load on command
-}
-
--- With custom configuration (optional)
-{
-  "h0pes/screw.nvim",
-  version = "^1",
-  ft = { "lua", "python", "javascript", "go", "rust" }, -- Load for specific filetypes
-  cmd = "Screw",
-  config = function()
-    require("screw").setup({
-      storage = { 
-        backend = "sqlite",
-        path = "/home/user/security_reviews",
-        filename = "project_security_notes.db"
-      },
-      collaboration = { enabled = true }
-    })
-  end,
-}
-
--- With Telescope integration for search functionality
-{
-  "h0pes/screw.nvim",
-  version = "^1",
-  cmd = "Screw",
-  dependencies = {
-    "nvim-telescope/telescope.nvim", -- Required for search functionality
-  },
-  config = function()
-    -- Load telescope extension
-    require("telescope").load_extension("screw")
-    
-    -- Optional: setup keymaps for telescope search
-    vim.keymap.set("n", "<leader>ss", ":Telescope screw notes<CR>", { desc = "Search security notes" })
-    vim.keymap.set("n", "<leader>sf", ":Telescope screw file_notes<CR>", { desc = "Search notes in current file" })
-    vim.keymap.set("n", "<leader>sv", ":Telescope screw vulnerable<CR>", { desc = "Search vulnerable notes" })
-  end,
+  opts = {
+    -- your configuration comes here
+    -- or leave it empty to use the default settings
+    -- refer to the configuration section below
+  }
 }
 ```
 
-</details>
+<details>
+<summary>Alternative installation methods</summary>
 
-### packer.nvim
+#### packer.nvim
 
 ```lua
--- Minimal setup (no configuration needed)
+-- Minimal setup (plugin works out of the box)
 use "h0pes/screw.nvim"
 
 -- With custom configuration (optional)
@@ -107,25 +70,24 @@ use {
   "h0pes/screw.nvim",
   config = function()
     require("screw").setup({
-      storage = { 
-        backend = "sqlite",
-        path = vim.fn.stdpath("data") .. "/screw",
-        filename = "security_notes.db"
-      }
+      -- your configuration comes here
+      -- or leave it empty to use the default settings
     })
   end
 }
 ```
 
-### vim-plug
+#### vim-plug
 
 ```vim
 Plug 'h0pes/screw.nvim'
 " No configuration needed - plugin works out of the box!
 
 " Optional: customize configuration
-lua require("screw").setup({ storage = { backend = "sqlite", path = "~/security_notes", filename = "notes.db" } })
+" lua require("screw").setup({ storage = { backend = "sqlite" } })
 ```
+
+</details>
 
 ## :rocket: Quick Start
 
@@ -222,59 +184,25 @@ screw.nvim automatically displays color-coded signs in the signcolumn to provide
 > [!NOTE]
 > **Configuration is entirely optional.** The plugin works perfectly with zero configuration using intelligent defaults. Only configure what you want to change from the defaults.
 
-### Configuration Methods
-
-**Method 1: Using `setup()` function (traditional)**
-```lua
-require("screw").setup({
-  storage = { backend = "sqlite" },
-  collaboration = { enabled = true }
-})
-```
-
-**Method 2: Using `vim.g` global variable (recommended)**
-```lua
--- Static configuration
-vim.g.screw_nvim = {
-  storage = { 
-    backend = "sqlite",
-    path = "/home/user/security_reviews",
-    filename = "project_notes.db"
-  },
-  ui = { float_window = { width = 100 } }
-}
-
--- Dynamic configuration (function)
-vim.g.screw_nvim = function()
-  local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
-  return {
-    storage = { 
-      backend = "sqlite",
-      path = vim.fn.stdpath("data") .. "/screw",
-      filename = "security_" .. project_name .. ".db"
-    }
-  }
-end
-```
-
-<details>
-<summary>Complete configuration reference</summary>
+screw.nvim comes with the following defaults:
 
 ```lua
--- All available options with their defaults
-vim.g.screw_nvim = {
+{
+  -- Storage configuration
   storage = {
-    backend = "json",           -- "json" | "sqlite"
+    backend = "json",           -- Storage backend: "json" or "sqlite"
     path = nil,                 -- Defaults to project root directory
-    filename = nil,             -- Defaults to "screw_notes_<timestamp>.json"
-    auto_save = true,           -- Auto-save on changes
+    filename = nil,             -- Auto-generated with timestamp: "screw_notes_<timestamp>.json"
+    auto_save = true,           -- Auto-save notes on changes
   },
+
+  -- UI configuration
   ui = {
     float_window = {
       width = 80,               -- Window width (number or "50%")
       height = 20,              -- Window height (number or "50%")
-      border = "rounded",       -- "none"|"single"|"double"|"rounded"|"solid"|"shadow"
-      winblend = 0,             -- Transparency (0-100)
+      border = "rounded",       -- Border style: "none"|"single"|"double"|"rounded"|"solid"|"shadow"
+      winblend = 0,             -- Window transparency (0-100)
     },
     highlights = {
       note_marker = "DiagnosticInfo",      -- General note indicators
@@ -285,31 +213,54 @@ vim.g.screw_nvim = {
       field_info = "Comment",              -- Field descriptions in UI forms
     },
   },
+
+  -- Collaboration configuration
   collaboration = {
     enabled = false,            -- Enable real-time collaboration
     database_url = "",          -- RethinkDB connection URL
     sync_interval = 1000,       -- Sync interval in milliseconds
   },
+
+  -- Export configuration
   export = {
-    default_format = "markdown", -- "markdown"|"json"|"csv"
+    default_format = "markdown", -- Default export format: "markdown"|"json"|"csv"|"sarif"
     output_dir = nil,           -- Defaults to project root
   },
+
+  -- Import configuration
   import = {
-    supported_tools = { "semgrep", "bandit", "gosec", "sonarqube" },
-    auto_map_cwe = true,        -- Auto-classify SAST findings
+    sarif = {
+      collision_strategy = "ask", -- How to handle collisions: "ask"|"skip"|"overwrite"|"merge"
+      default_author = "sarif-import", -- Default author for imported notes
+      preserve_metadata = true,   -- Store import metadata (tool, timestamps, rule IDs)
+      show_progress = false,      -- Show progress for large imports
+    },
+    auto_map_cwe = true,          -- Auto-classify SARIF findings with CWE
   },
+
+  -- Signs configuration
   signs = {
     enabled = true,             -- Enable signcolumn indicators
     priority = 8,               -- Sign priority level
     icons = {
+      -- Native notes
       vulnerable = "🔴",        -- Icon for vulnerable notes
       not_vulnerable = "✅",    -- Icon for not vulnerable notes  
-      todo = "📝"               -- Icon for todo notes
+      todo = "📝",              -- Icon for todo notes
+      -- Imported notes (from SARIF)
+      vulnerable_imported = "🔺",    -- Icon for imported vulnerable notes
+      not_vulnerable_imported = "☑️", -- Icon for imported not vulnerable notes
+      todo_imported = "📋",          -- Icon for imported todo notes
     },
     colors = {
+      -- Native notes
       vulnerable = "#f87171",   -- Red color for vulnerable signs
       not_vulnerable = "#34d399", -- Green color for not vulnerable signs
-      todo = "#fbbf24"          -- Yellow color for todo signs
+      todo = "#fbbf24",         -- Yellow color for todo signs
+      -- Imported notes (slightly different shades)
+      vulnerable_imported = "#dc2626",    -- Darker red for imported vulnerable
+      not_vulnerable_imported = "#16a34a", -- Darker green for imported safe
+      todo_imported = "#d97706",          -- Darker yellow for imported todo
     },
     keywords = {                -- Keywords for jump navigation and filtering
       vulnerable = { "VULNERABLE", "FIXME", "BUG", "ISSUE", "VULNERABILITY", "SECURITY", "EXPLOIT" },
@@ -320,183 +271,105 @@ vim.g.screw_nvim = {
 }
 ```
 
+### Example Configurations
+
+<details>
+<summary>SQLite storage with custom path</summary>
+
+```lua
+{
+  "h0pes/screw.nvim",
+  opts = {
+    storage = {
+      backend = "sqlite",
+      path = vim.fn.stdpath("data") .. "/screw",
+      filename = "security_notes.db"
+    }
+  }
+}
+```
+
 </details>
 
-### Storage Configuration
-
-#### Custom Storage Path and Filename
-
-The plugin supports fully customizable storage paths and filenames to fit your workflow:
+<details>
+<summary>Collaboration mode with RethinkDB</summary>
 
 ```lua
--- Default behavior (project root with timestamp)
-vim.g.screw_nvim = {}
--- Result: /project/root/screw_notes_20240708_143022.json
-
--- Custom directory only
-vim.g.screw_nvim = {
-  storage = {
-    path = "/home/user/security_reviews"
-  }
-}
--- Result: /home/user/security_reviews/screw_notes_20240708_143022.json
-
--- Custom filename only  
-vim.g.screw_nvim = {
-  storage = {
-    filename = "my_security_notes.json"
-  }
-}
--- Result: /project/root/my_security_notes.json
-
--- Both custom path and filename
-vim.g.screw_nvim = {
-  storage = {
-    path = "/home/user/security_reviews",
-    filename = "project_alpha_notes.json"
-  }
-}
--- Result: /home/user/security_reviews/project_alpha_notes.json
-
--- Dynamic configuration for project-specific names
-vim.g.screw_nvim = function()
-  local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ":t")
-  return {
-    storage = {
-      path = vim.fn.stdpath("data") .. "/screw",
-      filename = "security_" .. project_name .. ".json"
+{
+  "h0pes/screw.nvim",
+  opts = {
+    collaboration = {
+      enabled = true,
+      database_url = "rethinkdb://localhost:28015/security_notes",
+      sync_interval = 500
     }
   }
-end
--- Result: ~/.local/share/nvim/screw/security_myproject.json
+}
 ```
 
-#### Storage Features
+</details>
 
-- **🕐 Timestamp Support** - Default filenames include `YYYYMMDD_HHMMSS` format
-- **📁 Directory Auto-creation** - Storage directories are created automatically
-- **🔧 Extension Handling** - SQLite backend automatically converts `.json` to `.db`
-- **⚡ Path Validation** - Configuration validates storage paths and permissions
-- **🔄 Migration Support** - Easy migration between different storage locations
-
-### Signs Configuration
-
-The signcolumn indicators can be fully customized:
+<details>
+<summary>SARIF import with custom settings</summary>
 
 ```lua
-vim.g.screw_nvim = {
-  signs = {
-    enabled = true,           -- Toggle signcolumn indicators
-    priority = 8,             -- Sign priority (higher = more visible)
-    icons = {
-      vulnerable = "🚨",      -- Custom vulnerable icon
-      not_vulnerable = "🛡️", -- Custom safe icon  
-      todo = "⚠️"            -- Custom todo icon
+{
+  "h0pes/screw.nvim",
+  opts = {
+    import = {
+      sarif = {
+        collision_strategy = "skip", -- Skip conflicts instead of asking
+        default_author = "security-scan",
+        preserve_metadata = true,
+        show_progress = true
+      }
     },
-    colors = {
-      vulnerable = "#dc2626",     -- Custom red
-      not_vulnerable = "#16a34a", -- Custom green
-      todo = "#ca8a04"            -- Custom yellow
+    signs = {
+      icons = {
+        vulnerable_imported = "❌",
+        not_vulnerable_imported = "✅", 
+        todo_imported = "❓"
+      }
+    }
+  }
+}
+```
+
+</details>
+
+<details>
+<summary>Custom UI and signs</summary>
+
+```lua
+{
+  "h0pes/screw.nvim",
+  opts = {
+    ui = {
+      float_window = {
+        width = 100,
+        height = 25,
+        border = "double",
+        winblend = 10
+      }
     },
-    keywords = {
-      vulnerable = { "VULNERABLE", "FIXME", "BUG", "ISSUE", "VULNERABILITY", "SECURITY", "EXPLOIT" },
-      not_vulnerable = { "FALSE POSITIVE", "SECURE", "SAFE", "OK" },
-      todo = { "TODO", "INFO", "WARNING", "CHECK", "REVIEW" }
+    signs = {
+      icons = {
+        vulnerable = "❌",
+        not_vulnerable = "✅",
+        todo = "❓"
+      },
+      colors = {
+        vulnerable = "#ff4444",
+        not_vulnerable = "#44ff44",
+        todo = "#ffff44"
+      }
     }
   }
 }
 ```
 
-**Sign Behavior:**
-- **Multiple notes per line** - Shows highest priority sign (vulnerable > todo > not_vulnerable)
-- **Automatic placement** - Signs appear when plugin loads or when switching buffers
-- **Real-time updates** - Signs instantly reflect note changes
-- **Conflict-free** - Uses dedicated namespace to avoid plugin conflicts
+</details>
 
-### Highlights Configuration
-
-The plugin uses several highlight groups that can be customized to match your colorscheme:
-
-#### Default Highlight Groups
-
-The plugin creates the following highlight groups with their default links:
-
-| Highlight Group | Default Link | Purpose |
-|-----------------|-------------|---------|
-| `ScrewNoteMarker` | `DiagnosticInfo` | General note indicators |
-| `ScrewVulnerable` | `DiagnosticError` | Vulnerable state text |
-| `ScrewNotVulnerable` | `DiagnosticOk` | Not vulnerable state text |
-| `ScrewTodo` | `DiagnosticWarn` | Todo state text |
-| `ScrewFieldTitle` | `Title` | Field titles in UI forms |
-| `ScrewFieldInfo` | `Comment` | Field descriptions in UI forms |
-| `ScrewSignVulnerable` | Custom color | Sign column vulnerable icon |
-| `ScrewSignNotVulnerable` | Custom color | Sign column not vulnerable icon |
-| `ScrewSignTodo` | Custom color | Sign column todo icon |
-
-#### Customizing Highlights
-
-**Method 1: Configuration (recommended)**
-```lua
-vim.g.screw_nvim = {
-  ui = {
-    highlights = {
-      note_marker = "DiagnosticInfo",      -- General note indicators
-      vulnerable = "DiagnosticError",      -- Vulnerable state text
-      not_vulnerable = "DiagnosticOk",     -- Not vulnerable state text
-      todo = "DiagnosticWarn",             -- Todo state text
-      field_title = "Title",               -- Field titles in forms
-      field_info = "Comment",              -- Field descriptions in forms
-    }
-  }
-}
-```
-
-**Method 2: Direct highlight override**
-```lua
--- Override specific highlight groups after plugin loads
-vim.api.nvim_set_hl(0, "ScrewVulnerable", { link = "ErrorMsg" })
-vim.api.nvim_set_hl(0, "ScrewNotVulnerable", { link = "MoreMsg" })
-vim.api.nvim_set_hl(0, "ScrewTodo", { link = "WarningMsg" })
-vim.api.nvim_set_hl(0, "ScrewFieldTitle", { link = "Statement" })
-vim.api.nvim_set_hl(0, "ScrewFieldInfo", { link = "Question" })
-
--- Or use custom colors
-vim.api.nvim_set_hl(0, "ScrewVulnerable", { fg = "#ff6b6b", bold = true })
-vim.api.nvim_set_hl(0, "ScrewNotVulnerable", { fg = "#51cf66", bold = true })
-vim.api.nvim_set_hl(0, "ScrewTodo", { fg = "#ffd43b", bold = true })
-```
-
-**Method 3: Colorscheme integration**
-```lua
--- In your colorscheme or after colorscheme loads
-local function setup_screw_highlights()
-  vim.api.nvim_set_hl(0, "ScrewVulnerable", { fg = "#dc2626", bold = true })
-  vim.api.nvim_set_hl(0, "ScrewNotVulnerable", { fg = "#16a34a", bold = true })
-  vim.api.nvim_set_hl(0, "ScrewTodo", { fg = "#ca8a04", bold = true })
-  vim.api.nvim_set_hl(0, "ScrewFieldTitle", { fg = "#2563eb", bold = true })
-  vim.api.nvim_set_hl(0, "ScrewFieldInfo", { fg = "#6b7280", italic = true })
-end
-
--- Apply after colorscheme loads
-vim.api.nvim_create_autocmd("ColorScheme", {
-  callback = setup_screw_highlights,
-})
-setup_screw_highlights() -- Apply immediately
-```
-
-**Highlight Features:**
-- **Default behavior** - Links to standard Neovim diagnostic highlights
-- **Automatic fallback** - Uses sane defaults if diagnostic highlights don't exist
-- **Real-time updates** - Changes apply immediately to open windows
-- **Colorscheme compatible** - Respects your existing theme colors
-
-### Configuration Features
-
-- **✅ LSP Support** - Full autocomplete and type checking with lua-language-server
-- **✅ Validation** - Comprehensive validation with helpful error messages
-- **✅ No `nil` Values** - Internal configuration has no nil values for reliability
-- **✅ Dynamic Configuration** - Support for function-based configuration
-- **✅ Unknown Key Detection** - Warns about typos and unknown configuration keys
 
 ### Custom keymaps
 
@@ -584,7 +457,7 @@ All commands are scoped under `:Screw` with intelligent tab completion and file 
 |---------|-------------|---------|
 | `:Screw note add` | Create note at cursor position | `:Screw note add` |
 | `:Screw note edit` | Edit existing note | `:Screw note edit` |
-| `:Screw note delete [line\|file]` | Delete existing note(s) | `:Screw note delete line` |
+| `:Screw note delete [line\|file\|project]` | Delete existing note(s) | `:Screw note delete line` |
 | `:Screw note reply` | Add reply to existing note | `:Screw note reply` |
 | `:Screw note view {line\|file\|all}` | View notes by scope | `:Screw note view line` |
 | `:Screw export {format} [path]` | Export security report | `:Screw export sarif report.sarif` |
@@ -609,6 +482,9 @@ All commands are scoped under `:Screw` with intelligent tab completion and file 
 
 " Delete all notes in the current file (with confirmation)
 :Screw note delete file
+
+" Delete all notes in the project (with confirmation)
+:Screw note delete project
 
 " Add a reply to an existing note (threaded discussion)
 :Screw note reply
@@ -713,25 +589,37 @@ End of thread
 #### :inbox_tray: Import from SAST Tools
 
 ```vim
-" Import Semgrep results
-:Screw import semgrep /path/to/semgrep-results.json
+" Import SARIF report from any SAST tool
+:Screw import sarif /path/to/report.sarif
 
-" Import Bandit findings (Python)
-:Screw import bandit bandit-output.json
-
-" Import Gosec results (Go)
-:Screw import gosec gosec-report.json
-
-" Import SonarQube findings
-:Screw import sonarqube sonar-results.json
+" Examples with different tools
+:Screw import sarif bandit-results.sarif
+:Screw import sarif semgrep-output.sarif
+:Screw import sarif gosec-report.sarif
+:Screw import sarif sonarqube-findings.sarif
 ```
 
-**Import Features:**
-- **Tool support**: `semgrep`, `bandit`, `gosec`, `sonarqube`
-- **Path completion**: Tab complete for input file paths
-- **Auto-classification**: Automatically sets vulnerability state based on severity
-- **CWE mapping**: Maps tool-specific rule IDs to CWE classifications
-- **Batch processing**: Import hundreds of findings efficiently
+**SARIF Import Features:**
+- **🌐 Universal compatibility** - Works with any SARIF v2.1.0 compliant tool (Bandit, Semgrep, Gosec, SonarQube, CodeQL, etc.)
+- **🔄 Smart collision detection** - Handles overlapping findings intelligently with user choice
+- **📝 Source tracking** - Differentiates imported vs. native notes with distinct visual indicators
+- **🏷️ Metadata preservation** - Retains tool name, rule IDs, confidence levels, and import timestamps
+- **⚡ Batch processing** - Import hundreds of findings efficiently
+- **🎯 Path resolution** - Automatically converts absolute paths to project-relative paths
+- **🔍 CWE extraction** - Automatically extracts CWE classifications from SARIF rule metadata
+
+**Collision Handling:**
+When importing finds conflicts with existing notes, you can choose to:
+- **Ask** (default) - Prompt for each collision
+- **Skip** - Skip conflicting imports  
+- **Overwrite** - Replace existing notes
+- **Keep both** - Import alongside existing notes
+
+**Visual Differentiation:**
+Imported notes show distinct signcolumn icons:
+- 🔺 Imported vulnerable (vs 🔴 native)
+- ☑️ Imported safe (vs ✅ native)
+- 📋 Imported todo (vs 📝 native)
 
 #### :bar_chart: Statistics
 
@@ -892,7 +780,7 @@ The plugin provides intelligent tab completion for all commands:
 :Screw <Tab>                    " → note, export, import, stats, jump, search
 :Screw note <Tab>               " → add, edit, delete, reply, view
 :Screw note view <Tab>          " → line, file, all
-:Screw note delete <Tab>        " → line, file
+:Screw note delete <Tab>        " → line, file, project
 :Screw export <Tab>             " → markdown, json, csv, sarif
 :Screw export sarif <Tab>       " → file path completion
 :Screw import <Tab>             " → semgrep, bandit, gosec, sonarqube

@@ -721,6 +721,85 @@ function M.delete_current_file_notes_with_confirmation()
   end
 end
 
+--- Delete all notes in project with confirmation
+function M.delete_all_project_notes_with_confirmation()
+  local notes = notes_manager.get_notes()
+  local utils = require("screw.utils")
+
+  if #notes == 0 then
+    utils.info("No notes found in project")
+    return
+  end
+
+  -- Filter notes to only those the user can delete (same author)
+  local deletable_notes = {}
+  local author = utils.get_author()
+
+  for _, note in ipairs(notes) do
+    if note.author == author then
+      table.insert(deletable_notes, note)
+    end
+  end
+
+  if #deletable_notes == 0 then
+    utils.info("No notes found in project that you can delete (you can only delete your own notes)")
+    return
+  end
+
+  -- Build detailed confirmation message with note previews
+  local confirm_lines = {
+    "Delete all " .. #deletable_notes .. " note(s) in project?",
+    "Project: " .. vim.g.screw_project_root,
+    "",
+    "This will delete " .. #deletable_notes .. " of " .. #notes .. " total notes (only your notes will be deleted)",
+    "",
+    "Notes to be deleted:",
+    "──────────────────────────────────────────────────────",
+  }
+
+  -- Add details for each note to be deleted (show first 10, then summary)
+  local preview_count = math.min(10, #deletable_notes)
+  for i = 1, preview_count do
+    local note = deletable_notes[i]
+    local comment_preview = note.comment:sub(1, 50) .. (#note.comment > 50 and "..." or "")
+    local safe_state = note.state:gsub("[%[%]%(%)%&]", "")
+    local safe_comment = comment_preview:gsub("[%[%]%(%)%&]", "")
+    local relative_path = note.file_path:gsub("^" .. vim.pesc(vim.g.screw_project_root .. "/"), "")
+    table.insert(
+      confirm_lines,
+      string.format("%s:%d: %s - %s", relative_path, note.line_number, safe_state, safe_comment)
+    )
+  end
+
+  if #deletable_notes > preview_count then
+    table.insert(confirm_lines, "... and " .. (#deletable_notes - preview_count) .. " more note(s)")
+  end
+
+  table.insert(
+    confirm_lines,
+    "──────────────────────────────────────────────────────"
+  )
+
+  local confirm_message = table.concat(confirm_lines, "\n")
+
+  local confirm_result = vim.fn.confirm(confirm_message, "&Yes\n&No", 2, "Question")
+
+  if confirm_result == 1 then -- Yes
+    local deleted_count = 0
+    for _, note in ipairs(deletable_notes) do
+      if notes_manager.delete_note(note.id) then
+        deleted_count = deleted_count + 1
+      end
+    end
+
+    if deleted_count > 0 then
+      utils.info("Successfully deleted " .. deleted_count .. " note(s) from project")
+    else
+      utils.error("Failed to delete notes")
+    end
+  end
+end
+
 --- Show note selection window for adding replies
 ---@param notes ScrewNote[]
 function M.show_reply_selection_window(notes)

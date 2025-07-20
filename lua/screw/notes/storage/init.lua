@@ -89,4 +89,8 @@ function M.get_storage_stats()
   return M.get_backend():get_storage_stats()
 end
 
+function M.replace_all_notes(notes)
+  return M.get_backend():replace_all_notes(notes)
+end
+
 return M

@@ -17,6 +17,8 @@
 ---@field state "vulnerable"|"not_vulnerable"|"todo" Vulnerability assessment state
 ---@field severity "high"|"medium"|"low"|"info"? Severity level (mandatory if state is "vulnerable", optional otherwise)
 ---@field replies ScrewReply[]? Array of reply messages
+---@field source "native"|"sarif-import"? Source of the note (defaults to "native")
+---@field import_metadata ScrewImportMetadata? Import-specific metadata (only for imported notes)
 
 ---@class ScrewReply
 ---@field id string Unique identifier for the reply
@@ -41,11 +43,33 @@
 ---@field filter ScrewNoteFilter? Filter criteria
 ---@field include_replies boolean? Include reply threads (default: true)
 
+---@class ScrewImportMetadata
+---@field tool_name string Tool that generated the findings (e.g., "Bandit", "Semgrep")
+---@field sarif_file_path string Original SARIF file path
+---@field import_timestamp string ISO 8601 timestamp when import occurred
+---@field rule_id string Tool-specific rule ID (e.g., "B304", "rules.detect-sql-injection")
+---@field confidence string? Confidence level from tool ("HIGH", "MEDIUM", "LOW")
+---@field original_severity string? Original severity from tool
+---@field original_level string? Original SARIF level ("error", "warning", "note", "none")
+
 ---@class ScrewImportOptions
----@field tool "semgrep"|"bandit"|"gosec"|"sonarqube" SAST tool type
+---@field format "sarif" Import format (currently only SARIF supported)
 ---@field input_path string Input file path
----@field author string? Author name for imported notes
----@field auto_classify boolean? Auto-classify vulnerability state (default: true)
+---@field author string? Author name for imported notes (default: "sarif-import")
+---@field collision_strategy "ask"|"skip"|"overwrite"|"merge"? How to handle collisions (default: "ask")
+---@field file_filter string[]? Only import findings for specific files
+---@field show_progress boolean? Show progress indicator for large imports (default: false)
+
+---@class ScrewImportResult
+---@field success boolean Whether import completed successfully
+---@field total_findings integer Total findings in SARIF file
+---@field imported_count integer Number of notes successfully imported
+---@field skipped_count integer Number of findings skipped (duplicates, filtered, etc.)
+---@field collision_count integer Number of collisions handled
+---@field error_count integer Number of errors encountered
+---@field tool_name string Name of the tool that generated the SARIF
+---@field sarif_file_path string Path to the imported SARIF file
+---@field errors string[]? List of error messages if any occurred
 
 ---@class StorageBackend
 ---@field setup fun(): nil Initialize the storage backend

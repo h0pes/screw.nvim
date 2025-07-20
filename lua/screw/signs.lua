@@ -44,7 +44,7 @@ end
 function M.setup_highlights()
   local signs_config = config.get_option("signs")
 
-  -- Define highlight groups if they don't exist
+  -- Define highlight groups for native notes
   vim.api.nvim_set_hl(0, "ScrewSignVulnerable", {
     fg = signs_config.colors.vulnerable,
     default = true,
@@ -59,12 +59,29 @@ function M.setup_highlights()
     fg = signs_config.colors.todo,
     default = true,
   })
+
+  -- Define highlight groups for imported notes
+  vim.api.nvim_set_hl(0, "ScrewSignVulnerableImported", {
+    fg = signs_config.colors.vulnerable_imported or signs_config.colors.vulnerable,
+    default = true,
+  })
+
+  vim.api.nvim_set_hl(0, "ScrewSignNotVulnerableImported", {
+    fg = signs_config.colors.not_vulnerable_imported or signs_config.colors.not_vulnerable,
+    default = true,
+  })
+
+  vim.api.nvim_set_hl(0, "ScrewSignTodoImported", {
+    fg = signs_config.colors.todo_imported or signs_config.colors.todo,
+    default = true,
+  })
 end
 
 --- Setup sign definitions
 function M.setup_sign_definitions()
   local signs_config = config.get_option("signs")
 
+  -- Define signs for native notes
   vim.fn.sign_define("ScrewVulnerable", {
     text = signs_config.icons.vulnerable,
     texthl = "ScrewSignVulnerable",
@@ -80,6 +97,25 @@ function M.setup_sign_definitions()
   vim.fn.sign_define("ScrewTodo", {
     text = signs_config.icons.todo,
     texthl = "ScrewSignTodo",
+    priority = signs_config.priority,
+  })
+
+  -- Define signs for imported notes
+  vim.fn.sign_define("ScrewVulnerableImported", {
+    text = signs_config.icons.vulnerable_imported or signs_config.icons.vulnerable,
+    texthl = "ScrewSignVulnerableImported",
+    priority = signs_config.priority,
+  })
+
+  vim.fn.sign_define("ScrewNotVulnerableImported", {
+    text = signs_config.icons.not_vulnerable_imported or signs_config.icons.not_vulnerable,
+    texthl = "ScrewSignNotVulnerableImported",
+    priority = signs_config.priority,
+  })
+
+  vim.fn.sign_define("ScrewTodoImported", {
+    text = signs_config.icons.todo_imported or signs_config.icons.todo,
+    texthl = "ScrewSignTodoImported",
     priority = signs_config.priority,
   })
 end
@@ -178,41 +214,50 @@ function M.place_buffer_signs(bufnr)
 
   -- Place signs for each line with notes
   for line_number, line_notes in pairs(notes_by_line) do
-    local sign_state = M.get_priority_state(line_notes)
-    M.place_sign(bufnr, line_number, sign_state)
+    local sign_state, is_imported = M.get_priority_state(line_notes)
+    M.place_sign(bufnr, line_number, sign_state, is_imported)
   end
 end
 
 --- Get the highest priority state from multiple notes on the same line
 ---@param notes ScrewNote[]
----@return string
+---@return string state
+---@return boolean is_imported
 function M.get_priority_state(notes)
   local max_priority = 0
   local priority_state = "todo"
+  local is_imported = false
 
   for _, note in ipairs(notes) do
     local priority = SIGN_PRIORITY[note.state] or 0
     if priority > max_priority then
       max_priority = priority
       priority_state = note.state
+      is_imported = note.source == "sarif-import"
+    elseif priority == max_priority then
+      -- If same priority, prefer native over imported for visual clarity
+      if note.source == "native" or not note.source then
+        is_imported = false
+      end
     end
   end
 
-  return priority_state
+  return priority_state, is_imported
 end
 
 --- Place a sign at specific line
 ---@param bufnr number
 ---@param line_number number
 ---@param state string
-function M.place_sign(bufnr, line_number, state)
+---@param is_imported boolean?
+function M.place_sign(bufnr, line_number, state, is_imported)
   local signs_config = config.get_option("signs")
 
   if not signs_config.enabled then
     return
   end
 
-  local sign_name = M.get_sign_name(state)
+  local sign_name = M.get_sign_name(state, is_imported)
   if not sign_name then
     return
   end
@@ -233,6 +278,7 @@ function M.place_sign(bufnr, line_number, state)
   signs_by_buffer[bufnr][line_number] = {
     id = sign_id,
     state = state,
+    is_imported = is_imported,
   }
 end
 
@@ -323,8 +369,8 @@ function M.update_line_signs(bufnr, line_number)
 
   -- Place new sign if notes exist
   if #line_notes > 0 then
-    local sign_state = M.get_priority_state(line_notes)
-    M.place_sign(bufnr, line_number, sign_state)
+    local sign_state, is_imported = M.get_priority_state(line_notes)
+    M.place_sign(bufnr, line_number, sign_state, is_imported)
   end
 end
 
@@ -346,17 +392,26 @@ function M.find_buffer_by_file(file_path)
   return nil
 end
 
---- Get sign name for state
+--- Get sign name for state and source
 ---@param state string
+---@param is_imported boolean?
 ---@return string?
-function M.get_sign_name(state)
-  local sign_map = {
-    vulnerable = "ScrewVulnerable",
-    not_vulnerable = "ScrewNotVulnerable",
-    todo = "ScrewTodo",
-  }
-
-  return sign_map[state]
+function M.get_sign_name(state, is_imported)
+  if is_imported then
+    local imported_sign_map = {
+      vulnerable = "ScrewVulnerableImported",
+      not_vulnerable = "ScrewNotVulnerableImported",
+      todo = "ScrewTodoImported",
+    }
+    return imported_sign_map[state]
+  else
+    local native_sign_map = {
+      vulnerable = "ScrewVulnerable",
+      not_vulnerable = "ScrewNotVulnerable",
+      todo = "ScrewTodo",
+    }
+    return native_sign_map[state]
+  end
 end
 
 --- Generate unique sign ID

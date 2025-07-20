@@ -73,8 +73,17 @@ local default_config = {
   },
   ---@type table
   import = {
-    ---@type string[]
-    supported_tools = { "semgrep", "bandit", "gosec", "sonarqube" },
+    ---@type table
+    sarif = {
+      ---@type "ask"|"skip"|"overwrite"|"merge"
+      collision_strategy = "ask",
+      ---@type string
+      default_author = "sarif-import",
+      ---@type boolean
+      preserve_metadata = true,
+      ---@type boolean
+      show_progress = false,
+    },
     ---@type boolean
     auto_map_cwe = true,
   },
@@ -92,6 +101,12 @@ local default_config = {
       not_vulnerable = "✅",
       ---@type string
       todo = "📝",
+      ---@type string
+      vulnerable_imported = "🔺",
+      ---@type string
+      not_vulnerable_imported = "☑️",
+      ---@type string
+      todo_imported = "📋",
     },
     ---@type table
     colors = {
@@ -101,6 +116,12 @@ local default_config = {
       not_vulnerable = "#34d399",
       ---@type string
       todo = "#fbbf24",
+      ---@type string
+      vulnerable_imported = "#dc2626",
+      ---@type string
+      not_vulnerable_imported = "#16a34a",
+      ---@type string
+      todo_imported = "#d97706",
     },
     ---@type table
     keywords = {
@@ -128,10 +149,25 @@ local function validate_config_structure(config)
     highlights = { "note_marker", "vulnerable", "not_vulnerable", "todo", "field_title", "field_info" },
     collaboration = { "enabled", "database_url", "sync_interval" },
     export = { "default_format", "output_dir" },
-    import = { "supported_tools", "auto_map_cwe" },
+    import = { "sarif", "auto_map_cwe" },
+    sarif = { "collision_strategy", "default_author", "preserve_metadata", "show_progress" },
     signs = { "enabled", "priority", "icons", "colors", "keywords" },
-    icons = { "vulnerable", "not_vulnerable", "todo" },
-    colors = { "vulnerable", "not_vulnerable", "todo" },
+    icons = {
+      "vulnerable",
+      "not_vulnerable",
+      "todo",
+      "vulnerable_imported",
+      "not_vulnerable_imported",
+      "todo_imported",
+    },
+    colors = {
+      "vulnerable",
+      "not_vulnerable",
+      "todo",
+      "vulnerable_imported",
+      "not_vulnerable_imported",
+      "todo_imported",
+    },
     keywords = { "vulnerable", "not_vulnerable", "todo" },
   }
 
@@ -160,6 +196,15 @@ local function validate_config_structure(config)
         if not vim.tbl_contains(allowed_keys.highlights, key) then
           return false, string.format("Unknown ui.highlights key: '%s'", key)
         end
+      end
+    end
+  end
+
+  -- Check import.sarif section
+  if config.import and config.import.sarif then
+    for key in pairs(config.import.sarif) do
+      if not vim.tbl_contains(allowed_keys.sarif, key) then
+        return false, string.format("Unknown import.sarif key: '%s'", key)
       end
     end
   end
@@ -239,7 +284,18 @@ local function validate_config_values(config)
 
     -- Import validations
     { "import", "table", config.import },
-    { "import.supported_tools", "table", config.import.supported_tools },
+    { "import.sarif", "table", config.import.sarif },
+    {
+      "import.sarif.collision_strategy",
+      function(v)
+        return vim.tbl_contains({ "ask", "skip", "overwrite", "merge" }, v)
+      end,
+      config.import.sarif.collision_strategy,
+      "must be 'ask', 'skip', 'overwrite', or 'merge'",
+    },
+    { "import.sarif.default_author", "string", config.import.sarif.default_author },
+    { "import.sarif.preserve_metadata", "boolean", config.import.sarif.preserve_metadata },
+    { "import.sarif.show_progress", "boolean", config.import.sarif.show_progress },
     { "import.auto_map_cwe", "boolean", config.import.auto_map_cwe },
 
     -- Signs validations
@@ -250,10 +306,16 @@ local function validate_config_values(config)
     { "signs.icons.vulnerable", "string", config.signs.icons.vulnerable },
     { "signs.icons.not_vulnerable", "string", config.signs.icons.not_vulnerable },
     { "signs.icons.todo", "string", config.signs.icons.todo },
+    { "signs.icons.vulnerable_imported", "string", config.signs.icons.vulnerable_imported },
+    { "signs.icons.not_vulnerable_imported", "string", config.signs.icons.not_vulnerable_imported },
+    { "signs.icons.todo_imported", "string", config.signs.icons.todo_imported },
     { "signs.colors", "table", config.signs.colors },
     { "signs.colors.vulnerable", "string", config.signs.colors.vulnerable },
     { "signs.colors.not_vulnerable", "string", config.signs.colors.not_vulnerable },
     { "signs.colors.todo", "string", config.signs.colors.todo },
+    { "signs.colors.vulnerable_imported", "string", config.signs.colors.vulnerable_imported },
+    { "signs.colors.not_vulnerable_imported", "string", config.signs.colors.not_vulnerable_imported },
+    { "signs.colors.todo_imported", "string", config.signs.colors.todo_imported },
     { "signs.keywords", "table", config.signs.keywords },
     { "signs.keywords.vulnerable", "table", config.signs.keywords.vulnerable },
     { "signs.keywords.not_vulnerable", "table", config.signs.keywords.not_vulnerable },
