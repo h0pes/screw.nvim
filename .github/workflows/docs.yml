@@ -50,28 +50,6 @@ jobs:
           demojify: true
           treesitter: true
       
-      - name: Generate API documentation
-        run: |
-          # Install mini.doc if it doesn't exist
-          if [ ! -d "mini.doc" ]; then
-            git clone https://github.com/echasnovski/mini.doc.git
-          fi
-          
-          # Generate API docs
-          nvim --headless --clean -c "
-            lua package.path = package.path .. ';./mini.doc/lua/?.lua'
-            lua local minidoc = require('mini.doc')
-            lua minidoc.generate({
-              'lua/screw/init.lua',
-              'lua/screw/notes/manager.lua',
-              'lua/screw/export/init.lua',
-              'lua/screw/import/init.lua',
-              'lua/screw/config.lua',
-              'lua/screw/utils.lua'
-            }, 'doc/api.md')
-            lua vim.cmd('quit')
-          "
-      
       - name: Commit documentation
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
