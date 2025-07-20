@@ -7,12 +7,14 @@ on:
       - 'README.md'
       - 'lua/**'
       - 'doc/**'
+      - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'README.md'
       - 'lua/**'
       - 'doc/**'
+      - '.github/workflows/docs.yml'
 
 jobs:
   docs:
