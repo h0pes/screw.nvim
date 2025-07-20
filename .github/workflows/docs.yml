@@ -39,21 +39,14 @@ jobs:
       - name: Install dependencies
         run: |
           luarocks install --local ldoc
-          git clone https://github.com/kdheepak/panvimdoc.git
-          cd panvimdoc
-          luarocks make --local panvimdoc-scm-1.rockspec
-          cd ..
       
       - name: Generate vim documentation
-        run: |
-          panvimdoc \
-            --project-name screw.nvim \
-            --input-file README.md \
-            --vim-version "0.9.0" \
-            --toc true \
-            --description "Security code review plugin for Neovim" \
-            --title "screw.nvim" \
-            --treesitter true
+        uses: kdheepak/panvimdoc@main
+        with:
+          vimdoc: screw.nvim
+          version: "0.9.0"
+          demojify: true
+          treesitter: true
       
       - name: Generate API documentation
         run: |
