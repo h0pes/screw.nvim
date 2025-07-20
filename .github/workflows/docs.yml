@@ -38,10 +38,10 @@ jobs:
       
       - name: Install dependencies
         run: |
-          luarocks install ldoc
+          luarocks install --local ldoc
           git clone https://github.com/kdheepak/panvimdoc.git
           cd panvimdoc
-          luarocks make
+          luarocks make --local
           cd ..
       
       - name: Generate vim documentation

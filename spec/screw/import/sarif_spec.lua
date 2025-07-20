@@ -258,8 +258,10 @@ describe("SARIF Import Public API", function()
       local result = sarif_import.import(temp_file, options)
 
       assert.is_not_nil(result)
-      assert.is_true(result.success)
+      assert.is_false(result.success) -- Should be false since all notes skipped due to collision
       assert.is_true(result.collision_count > 0) -- Should detect collision
+      assert.equals(0, result.imported_count) -- Should import 0 notes due to skip strategy
+      assert.equals(1, result.skipped_count) -- Should skip 1 note due to collision
 
       -- Clean up
       vim.fn.getcwd = original_getcwd

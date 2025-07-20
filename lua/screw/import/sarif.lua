@@ -382,7 +382,7 @@ function M.import(file_path, options)
 
             if should_skip then
               result.skipped_count = result.skipped_count + 1
-              goto continue
+              goto continue_outer
             end
           end
         end
@@ -398,7 +398,7 @@ function M.import(file_path, options)
         if not note then
           result.error_count = result.error_count + 1
           table.insert(result.errors, "Failed to convert SARIF result to note")
-          goto continue
+          goto continue_outer
         end
 
         -- Check for collisions (including exact duplicates by ID)
@@ -415,7 +415,7 @@ function M.import(file_path, options)
 
         if duplicate_found then
           result.skipped_count = result.skipped_count + 1
-          goto continue
+          goto continue_outer
         end
 
         if collision_type ~= "none" then
@@ -425,7 +425,7 @@ function M.import(file_path, options)
 
           if not should_import then
             result.skipped_count = result.skipped_count + 1
-            goto continue
+            goto continue_outer
           end
         end
 
@@ -439,7 +439,7 @@ function M.import(file_path, options)
           table.insert(result.errors, "Failed to create note for " .. note.file_path .. ":" .. note.line_number)
         end
 
-        ::continue::
+        ::continue_outer::
       end
     end
   end
