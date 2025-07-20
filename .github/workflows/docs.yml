@@ -41,7 +41,7 @@ jobs:
           luarocks install --local ldoc
           git clone https://github.com/kdheepak/panvimdoc.git
           cd panvimdoc
-          luarocks make --local
+          luarocks make --local panvimdoc-scm-1.rockspec
           cd ..
       
       - name: Generate vim documentation
