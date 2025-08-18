@@ -15,7 +15,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Setup Neovim
         uses: rhysd/action-setup-vim@v1
@@ -62,7 +62,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Setup Lua
         uses: leafo/gh-actions-lua@v11
@@ -83,7 +83,7 @@ jobs:
     
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Setup stylua
         uses: JohnnyMorganz/stylua-action@v4
