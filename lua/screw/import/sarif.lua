@@ -485,11 +485,11 @@ function M.import(file_path, options)
                 result.error_count = result.error_count + 1
 
                 -- Provide more specific error messages for collaboration backends
-                local backend = storage.get_backend()
+                local current_backend = storage.get_backend()
                 local error_msg = "Failed to create note for " .. note.file_path .. ":" .. note.line_number
 
-                if backend.__class == "HttpBackend" then
-                  if not backend:is_connected() then
+                if current_backend.__class == "HttpBackend" then
+                  if not current_backend:is_connected() then
                     error_msg = error_msg .. " (HTTP API connection failed)"
                   else
                     error_msg = error_msg .. " (HTTP API error)"

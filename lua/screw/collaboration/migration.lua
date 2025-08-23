@@ -106,9 +106,9 @@ function MigrationUtil.migrate_local_to_db(progress_callback)
       end
     else
       stats.errors_count = stats.errors_count + 1
-      local error_msg = string.format("Failed to migrate note %s:%d", note.file_path, note.line_number)
-      table.insert(progress.errors, error_msg)
-      utils.warn(error_msg)
+      local migrate_error = string.format("Failed to migrate note %s:%d", note.file_path, note.line_number)
+      table.insert(progress.errors, migrate_error)
+      utils.warn(migrate_error)
     end
   end
 
@@ -219,9 +219,9 @@ function MigrationUtil.migrate_db_to_local(progress_callback)
       end
     else
       stats.errors_count = stats.errors_count + 1
-      local error_msg = string.format("Failed to export note %s:%d", note.file_path, note.line_number)
-      table.insert(progress.errors, error_msg)
-      utils.warn(error_msg)
+      local export_error = string.format("Failed to export note %s:%d", note.file_path, note.line_number)
+      table.insert(progress.errors, export_error)
+      utils.warn(export_error)
     end
   end
 
@@ -355,8 +355,8 @@ function MigrationUtil.sync_bidirectional(conflict_strategy, progress_callback)
       end
     elseif local_note then
       -- Note exists only locally - copy to database
-      local success = pg_backend:save_note(local_note)
-      if success then
+      local sync_success = pg_backend:save_note(local_note)
+      if sync_success then
         stats.notes_migrated = stats.notes_migrated + 1
       else
         stats.errors_count = stats.errors_count + 1
@@ -364,8 +364,8 @@ function MigrationUtil.sync_bidirectional(conflict_strategy, progress_callback)
       end
     elseif db_note then
       -- Note exists only in database - copy to local
-      local success = current_backend:save_note(db_note)
-      if success then
+      local local_success = current_backend:save_note(db_note)
+      if local_success then
         stats.notes_migrated = stats.notes_migrated + 1
       else
         stats.errors_count = stats.errors_count + 1
@@ -446,7 +446,7 @@ Local version:
   Comment: %s
 
 Database version:
-  Author: %s  
+  Author: %s
   Updated: %s
   Comment: %s
 

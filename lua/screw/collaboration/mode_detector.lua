@@ -72,7 +72,7 @@ local function check_database_notes()
   local HttpBackend = require("screw.notes.storage.http")
   local temp_backend = HttpBackend.new({ backend = "http" })
 
-  local success, error_msg = temp_backend:connect()
+  local success, _ = temp_backend:connect()
   if not success then
     return false, false, 0
   end

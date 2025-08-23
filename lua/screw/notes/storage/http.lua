@@ -39,7 +39,7 @@ end
 function HttpBackend:http_request(method, endpoint, data)
   local url = self.api_url .. endpoint
   local cmd = { "curl", "-s", "-X", method, "-H", "Content-Type: application/json" }
-  local is_reply_request = endpoint:match("/replies")
+  local _ = endpoint:match("/replies")
 
   if data then
     table.insert(cmd, "-d")
@@ -79,7 +79,7 @@ function HttpBackend:connect()
   end
 
   -- Test API connectivity
-  local response, err = self:http_request("GET", "/health")
+  local _, err = self:http_request("GET", "/health")
   if err then
     return false, "Cannot connect to collaboration server: " .. err
   end
@@ -268,7 +268,7 @@ function HttpBackend:add_reply(parent_id, reply)
   -- Remove client-generated ID - let the database generate a proper UUID
   reply_data.id = nil
 
-  local response, err = self:http_request("POST", "/notes/" .. parent_id .. "/replies", reply_data)
+  local _, err = self:http_request("POST", "/notes/" .. parent_id .. "/replies", reply_data)
   if err then
     utils.error("Failed to add reply: " .. err)
     return false

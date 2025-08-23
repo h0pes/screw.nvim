@@ -619,7 +619,7 @@ function PostgreSQLBackend:load_notes()
   end
 
   local query = [[
-    SELECT n.*, 
+    SELECT n.*,
            (SELECT json_agg(
               json_build_object(
                 'id', r.id,
@@ -629,8 +629,8 @@ function PostgreSQLBackend:load_notes()
                 'comment', r.comment
               ) ORDER BY r.created_at
             ) FROM replies r WHERE r.parent_id = n.id) as replies
-    FROM notes n 
-    WHERE n.project_id = $1 
+    FROM notes n
+    WHERE n.project_id = $1
     ORDER BY n.created_at DESC
   ]]
 
@@ -716,7 +716,7 @@ function PostgreSQLBackend:save_note(note)
     note.version = (existing_note.version or 1) + 1
 
     local query = [[
-      UPDATE notes SET 
+      UPDATE notes SET
         file_path = $3, line_number = $4, author = $5, timestamp = $6,
         updated_at = $7, comment = $8, description = $9, cwe = $10,
         state = $11, severity = $12, source = $13, import_metadata = $14,
@@ -843,7 +843,7 @@ function PostgreSQLBackend:clear_notes()
   end
 
   local query = "DELETE FROM notes WHERE project_id = $1"
-  local result, error_msg = self:execute_query(query, { self.connection.project_id })
+  local result, _ = self:execute_query(query, { self.connection.project_id })
 
   if result then
     self.cache.notes = {}
@@ -869,7 +869,7 @@ function PostgreSQLBackend:get_storage_stats()
   end
 
   local query = [[
-    SELECT 
+    SELECT
       COUNT(*) as total_notes,
       COUNT(CASE WHEN state = 'vulnerable' THEN 1 END) as vulnerable_notes,
       COUNT(CASE WHEN state = 'not_vulnerable' THEN 1 END) as safe_notes,
@@ -878,7 +878,7 @@ function PostgreSQLBackend:get_storage_stats()
     FROM notes WHERE project_id = $1
   ]]
 
-  local result, error_msg = self:execute_query(query, { self.connection.project_id })
+  local result, _ = self:execute_query(query, { self.connection.project_id })
 
   local stats = {
     backend = "postgresql",
@@ -917,15 +917,15 @@ function PostgreSQLBackend:replace_all_notes(notes)
 
   -- Begin transaction
   local transaction_query = "BEGIN"
-  local result, error_msg = self:execute_query(transaction_query)
+  local result, _ = self:execute_query(transaction_query)
   if not result then
     return false
   end
 
   -- Clear existing notes
   local clear_query = "DELETE FROM notes WHERE project_id = $1"
-  result, error_msg = self:execute_query(clear_query, { self.connection.project_id })
-  if not result then
+  local clear_result, _ = self:execute_query(clear_query, { self.connection.project_id })
+  if not clear_result then
     self:execute_query("ROLLBACK")
     return false
   end
@@ -949,16 +949,16 @@ function PostgreSQLBackend:replace_all_notes(notes)
     ]]
 
     local params = self:note_to_params(note)
-    result, error_msg = self:execute_query(insert_query, params)
-    if not result then
+    local insert_result, _ = self:execute_query(insert_query, params)
+    if not insert_result then
       self:execute_query("ROLLBACK")
       return false
     end
   end
 
   -- Commit transaction
-  result, error_msg = self:execute_query("COMMIT")
-  if not result then
+  local commit_result, _ = self:execute_query("COMMIT")
+  if not commit_result then
     return false
   end
 

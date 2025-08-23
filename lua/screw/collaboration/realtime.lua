@@ -168,7 +168,7 @@ function RealtimeSync:check_notifications()
   end
 
   -- Different notification checking based on PostgreSQL module
-  local notifications = {}
+  local notifications
 
   if handle.get_notifications then
     -- pgmoon style
@@ -347,7 +347,7 @@ end
 ---@return ScrewNote?
 function RealtimeSync:fetch_note_by_id(note_id)
   local query = [[
-    SELECT n.*, 
+    SELECT n.*,
            (SELECT json_agg(
               json_build_object(
                 'id', r.id,
@@ -357,11 +357,11 @@ function RealtimeSync:fetch_note_by_id(note_id)
                 'comment', r.comment
               ) ORDER BY r.created_at
             ) FROM replies r WHERE r.parent_id = n.id) as replies
-    FROM notes n 
+    FROM notes n
     WHERE n.id = $1 AND n.project_id = $2
   ]]
 
-  local result, error_msg = self.backend:execute_query(query, { note_id, self.backend.connection.project_id })
+  local result, _ = self.backend:execute_query(query, { note_id, self.backend.connection.project_id })
   if result and result[1] then
     return self.backend:row_to_note(result[1])
   end
@@ -375,7 +375,7 @@ end
 function RealtimeSync:fetch_reply_by_id(reply_id)
   local query = "SELECT * FROM replies WHERE id = $1"
 
-  local result, error_msg = self.backend:execute_query(query, { reply_id })
+  local result, _ = self.backend:execute_query(query, { reply_id })
   if result and result[1] then
     local row = result[1]
     return {
@@ -424,14 +424,14 @@ function RealtimeSync:fallback_sync_check()
 
   local query = [[
     SELECT MAX(updated_at) as last_update
-    FROM notes 
+    FROM notes
     WHERE project_id = $1 AND updated_at > $2
   ]]
 
   local last_sync = self.backend.cache.last_sync or 0
   local last_sync_timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ", last_sync / 1000)
 
-  local result, error_msg = self.backend:execute_query(query, {
+  local result, _ = self.backend:execute_query(query, {
     self.backend.connection.project_id,
     last_sync_timestamp,
   })
