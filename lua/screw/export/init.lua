@@ -13,8 +13,23 @@ local M = {}
 ---@return boolean
 function M.export_notes(options)
   -- Validate options
-  if not options or not options.format then
+  if not options or not options.format or options.format == "" then
     utils.error("Export format is required")
+    return false
+  end
+
+  -- Validate format is supported
+  local supported_formats = { "csv", "json", "markdown", "sarif" }
+  local format_supported = false
+  for _, fmt in ipairs(supported_formats) do
+    if options.format == fmt then
+      format_supported = true
+      break
+    end
+  end
+
+  if not format_supported then
+    utils.error("Unsupported export format: " .. options.format)
     return false
   end
 
@@ -23,8 +38,8 @@ function M.export_notes(options)
   local notes = notes_manager.get_notes(options.filter)
 
   if #notes == 0 then
-    utils.warn("No notes found to export")
-    return false
+    utils.warn("No notes found to export, creating empty file")
+    -- Continue with export to create empty file with headers
   end
 
   -- Determine output path (ensure it's absolute)

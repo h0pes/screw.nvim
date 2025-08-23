@@ -24,6 +24,10 @@ local function ensure_initialized()
   local config = require("screw.config")
   config.setup(_user_config)
 
+  -- Initialize collaboration first (may modify config)
+  local collaboration = require("screw.collaboration")
+  collaboration.setup()
+
   local notes_manager = require("screw.notes.manager")
   notes_manager.setup()
 
@@ -33,10 +37,6 @@ local function ensure_initialized()
   -- Initialize signs
   local signs = require("screw.signs")
   signs.setup()
-
-  -- Initialize collaboration if enabled
-  local collaboration = require("screw.collaboration")
-  collaboration.setup()
 
   -- Set up autocommands for project lifecycle
   local augroup = vim.api.nvim_create_augroup("ScrewNvim", { clear = true })
@@ -286,6 +286,75 @@ function M.jump_prev(opts)
   ensure_initialized()
   local jump = require("screw.jump")
   return jump.jump_prev(opts)
+end
+
+--- Get collaboration status
+---@return table Status information
+function M.get_collaboration_status()
+  ensure_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.get_status()
+end
+
+--- Switch collaboration mode
+---@param mode "local"|"collaborative" Target mode
+---@param force? boolean Skip confirmation dialog
+---@return boolean Success
+function M.switch_collaboration_mode(mode, force)
+  ensure_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.switch_mode(mode, force)
+end
+
+--- Trigger manual synchronization (collaborative mode only)
+---@return boolean Success
+function M.sync_notes()
+  ensure_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.sync_now()
+end
+
+--- Show collaboration information dialog
+function M.show_collaboration_info()
+  ensure_initialized()
+  local collaboration = require("screw.collaboration")
+  collaboration.show_info()
+end
+
+--- Access migration utilities
+---@return table Migration functions
+function M.migration()
+  ensure_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.migration()
+end
+
+--- Force database reconnection (PostgreSQL backend only)
+---@return boolean Success
+function M.force_reconnect()
+  ensure_initialized()
+  local storage = require("screw.notes.storage")
+  local backend = storage.get_backend()
+
+  if backend and backend.force_reconnect then
+    return backend:force_reconnect()
+  else
+    return false
+  end
+end
+
+--- Get offline status (PostgreSQL backend only)
+---@return table|nil Offline status or nil if not supported
+function M.get_offline_status()
+  ensure_initialized()
+  local storage = require("screw.notes.storage")
+  local backend = storage.get_backend()
+
+  if backend and backend.get_offline_status then
+    return backend:get_offline_status()
+  else
+    return nil
+  end
 end
 
 return M

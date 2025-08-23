@@ -294,18 +294,31 @@ function M.add_reply(parent_id, comment, author)
     comment = comment,
   }
 
-  if not note.replies then
-    note.replies = {}
-  end
-
-  table.insert(note.replies, reply)
-
-  if storage.save_note(note) then
-    utils.info("Reply added successfully")
-    return true
+  -- For HTTP backend, use add_reply method directly
+  local backend = storage.get_backend()
+  if backend and backend.add_reply then
+    if backend:add_reply(parent_id, reply) then
+      utils.info("Reply added successfully")
+      return true
+    else
+      utils.error("Failed to add reply")
+      return false
+    end
   else
-    utils.error("Failed to add reply")
-    return false
+    -- Fallback for other backends (JSON, etc.)
+    if not note.replies then
+      note.replies = {}
+    end
+
+    table.insert(note.replies, reply)
+
+    if storage.save_note(note) then
+      utils.info("Reply added successfully")
+      return true
+    else
+      utils.error("Failed to add reply")
+      return false
+    end
   end
 end
 

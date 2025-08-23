@@ -29,6 +29,13 @@ describe("screw.notes.manager", function()
       get_notes_for_line = function()
         return { mock_note }
       end,
+      get_backend = function()
+        return {
+          save_note = function()
+            return true
+          end,
+        }
+      end,
     }
 
     -- Also mock the storage init module

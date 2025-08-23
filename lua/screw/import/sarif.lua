@@ -86,13 +86,17 @@ local function resolve_file_path(sarif_uri, project_root)
     return nil
   end
 
-  -- Validate file exists
+  -- For SARIF imports, we allow importing notes even when files don't exist
+  -- This supports backup/restore scenarios and importing from external tools
+  -- Validate file exists but don't fail if it doesn't
   if vim.fn.filereadable(absolute_path) == 0 then
     -- Try relative path from current directory
     if vim.fn.filereadable(relative_path) == 1 then
       return relative_path
     end
-    return nil
+    -- File doesn't exist, but return the relative path anyway for SARIF imports
+    -- This allows importing notes for files that may exist in different environments
+    return relative_path
   end
 
   return relative_path
@@ -157,10 +161,15 @@ local function convert_sarif_result_to_note(result, rules, tool_info, import_met
     end
   end
 
-  -- Extract CWE
+  -- Extract CWE from rule or ruleId
   local cwe = nil
   if rule then
     cwe = extract_cwe_from_rule(rule)
+  end
+
+  -- If not found in rule tags, try to extract from ruleId directly
+  if not cwe and result.ruleId and result.ruleId:match("^CWE%-") then
+    cwe = result.ruleId
   end
 
   -- Map state and severity
@@ -170,9 +179,11 @@ local function convert_sarif_result_to_note(result, rules, tool_info, import_met
   -- Build comment from message
   local comment = result.message and result.message.text or "Imported security finding"
 
-  -- Build description from code snippet if available
+  -- Build description from SARIF message.markdown or code snippet
   local description = nil
-  if region.snippet and region.snippet.text then
+  if result.message and result.message.markdown then
+    description = result.message.markdown
+  elseif region.snippet and region.snippet.text then
     description = region.snippet.text:gsub("\n$", "") -- Remove trailing newline
   end
 
@@ -297,13 +308,22 @@ function M.parse_sarif(content)
     return nil, "Missing SARIF version"
   end
 
-  if not sarif_data.runs or #sarif_data.runs == 0 then
-    return nil, "No runs found in SARIF file"
+  -- Check version compatibility (must be 2.1.x)
+  if not sarif_data.version:match("^2%.1%.") then
+    return nil, "Unsupported SARIF version: " .. sarif_data.version .. ". Expected 2.1.x"
   end
 
-  -- Check version compatibility (accept 2.1.0 and similar)
-  if not sarif_data.version:match("^2%.1%.") then
-    utils.warn("SARIF version " .. sarif_data.version .. " may not be fully compatible. Expected 2.1.x")
+  if not sarif_data.runs then
+    return nil, "Missing runs in SARIF file"
+  end
+
+  -- Validate that runs is an array
+  if type(sarif_data.runs) ~= "table" then
+    return nil, "Invalid runs field: expected array, got " .. type(sarif_data.runs)
+  end
+
+  if #sarif_data.runs == 0 then
+    return nil, "No runs found in SARIF file"
   end
 
   return sarif_data, nil
@@ -344,9 +364,13 @@ function M.import(file_path, options)
   local storage = require("screw.notes.storage")
 
   -- Temporarily disable auto_save during import to prevent file write/reload cycles
+  -- Only do this for backends that support auto_save (JSON, SQLite)
   local backend = storage.get_backend()
-  local original_auto_save = backend.config.auto_save
-  backend.config.auto_save = false
+  local original_auto_save = nil
+  if backend.config and backend.config.auto_save ~= nil then
+    original_auto_save = backend.config.auto_save
+    backend.config.auto_save = false
+  end
 
   local existing_notes = storage.get_all_notes()
 
@@ -438,10 +462,52 @@ function M.import(file_path, options)
               local save_success = storage.save_note(note)
               if save_success then
                 result.imported_count = result.imported_count + 1
-                -- Note: existing_notes is already updated by save_note since it's the same reference
+                -- Add the new note to existing_notes for collision detection in subsequent iterations
+                table.insert(existing_notes, note)
+
+                -- Import replies if they exist in SARIF
+                if sarif_result.properties and sarif_result.properties.thread then
+                  for _, reply_data in ipairs(sarif_result.properties.thread) do
+                    local reply = {
+                      id = utils.generate_id(),
+                      parent_id = note.id,
+                      author = reply_data.author,
+                      timestamp = reply_data.timestamp,
+                      comment = reply_data.comment,
+                    }
+
+                    -- Use the notes manager to add the reply
+                    local notes_manager = require("screw.notes.manager")
+                    notes_manager.add_reply(note.id, reply.comment, reply.author)
+                  end
+                end
               else
                 result.error_count = result.error_count + 1
-                table.insert(result.errors, "Failed to create note for " .. note.file_path .. ":" .. note.line_number)
+
+                -- Provide more specific error messages for collaboration backends
+                local backend = storage.get_backend()
+                local error_msg = "Failed to create note for " .. note.file_path .. ":" .. note.line_number
+
+                if backend.__class == "HttpBackend" then
+                  if not backend:is_connected() then
+                    error_msg = error_msg .. " (HTTP API connection failed)"
+                  else
+                    error_msg = error_msg .. " (HTTP API error)"
+                  end
+                elseif backend.__class == "PostgreSQLBackend" then
+                  local offline_status = backend:get_offline_status()
+                  if offline_status and offline_status.active then
+                    error_msg = error_msg .. " (Database offline - note queued for sync)"
+                    -- In offline mode, the save might have actually succeeded locally
+                    result.error_count = result.error_count - 1
+                    result.imported_count = result.imported_count + 1
+                    table.insert(existing_notes, note)
+                  else
+                    error_msg = error_msg .. " (Database error)"
+                  end
+                end
+
+                table.insert(result.errors, error_msg)
               end
             end
           end
@@ -451,7 +517,13 @@ function M.import(file_path, options)
   end
 
   -- Restore auto_save setting and force save once at the end
-  backend.config.auto_save = original_auto_save
+  -- Only restore auto_save for backends that support it
+  if original_auto_save ~= nil and backend.config then
+    backend.config.auto_save = original_auto_save
+  end
+
+  -- Force save for local storage backends (JSON, SQLite)
+  -- Collaboration backends (PostgreSQL, HTTP) save immediately
   if result.imported_count > 0 then
     storage.force_save()
   end

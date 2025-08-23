@@ -33,11 +33,6 @@ _G.vim = {
       DEBUG = 4,
     },
   },
-  loop = {
-    new_timer = function()
-      return {}
-    end,
-  },
   api = {
     nvim_create_autocmd = function() end,
     nvim_create_user_command = function() end,
@@ -172,6 +167,9 @@ _G.vim = {
       end
       return ""
     end,
+    shellescape = function(str)
+      return "'" .. str:gsub("'", "'\"'\"'") .. "'"
+    end,
     input = function(prompt)
       return "test_input"
     end,
@@ -192,7 +190,8 @@ _G.vim = {
     nvim_get_current_line = function()
       return "test line"
     end,
-    nvim_win_get_cursor = function()
+    nvim_win_get_cursor = function(win)
+      -- Return current cursor position for any window (including 0 for current)
       return { 1, 0 }
     end,
     nvim_buf_get_name = function()
@@ -224,6 +223,21 @@ _G.vim = {
     nvim_get_current_buf = function()
       return 1
     end,
+    nvim_list_bufs = function()
+      return { 1, 2, 3 }
+    end,
+    nvim_buf_is_valid = function()
+      return true
+    end,
+    nvim_buf_is_loaded = function()
+      return true
+    end,
+    nvim_exec_autocmds = function()
+      -- Mock autocmd execution
+    end,
+    nvim_create_namespace = function(name)
+      return 123 -- Return a mock namespace ID
+    end,
   },
   keymap = {
     set = function() end,
@@ -236,6 +250,16 @@ _G.vim = {
     HOME = "/tmp/nvim-test",
   },
   loop = {
+    new_timer = function()
+      return {
+        start = function() end,
+        stop = function() end,
+        close = function() end,
+      }
+    end,
+    now = function()
+      return os.time() * 1000 -- Return milliseconds timestamp
+    end,
     fs_stat = function()
       return { type = "directory" }
     end,
@@ -257,17 +281,78 @@ _G.vim = {
   },
   json = {
     encode = function(obj)
+      -- Check for invalid objects that can't be encoded (like functions)
+      local function has_function(t)
+        if type(t) ~= "table" then
+          return false
+        end
+        for k, v in pairs(t) do
+          if type(v) == "function" then
+            return true
+          elseif type(v) == "table" then
+            if has_function(v) then
+              return true
+            end
+          end
+        end
+        return false
+      end
+
+      if type(obj) == "table" and has_function(obj) then
+        error("Cannot encode function to JSON")
+      end
+
       -- Store the encoded object for decode to use - this is the simplest approach
       _G._test_encoded_obj = obj
       -- Return a simple JSON string for logging/debugging
       return '{"version":"2.1.0","runs":[{"tool":{"driver":{"name":"screw.nvim"}},"results":[]}]}'
     end,
     decode = function(str)
-      -- Return the actual object that was passed to encode
-      -- This bypasses all JSON parsing complexities and gives tests the real structure
-      if _G._test_encoded_obj and _G._test_encoded_obj.version == "2.1.0" then
-        return _G._test_encoded_obj
+      -- PRIORITIZE: Return the actual object that was passed to encode
+      -- This is the most reliable approach for tests
+      if _G._test_encoded_obj then
+        local obj = _G._test_encoded_obj
+        -- For HTTP tests, keep the object available for multiple decode calls
+        -- Only clear for SARIF tests (which have version field)
+        if obj.version == "2.1.0" then
+          _G._test_encoded_obj = nil
+        end
+        return obj
       end
+
+      -- Fallback: Pattern-based JSON parsing
+      if type(str) == "string" then
+        -- Handle local notes file format (mode detector tests)
+        if str:match('"notes":%s*%[') then
+          local success, result = pcall(function()
+            -- Simple notes array parsing
+            local notes = {}
+            for note_json in str:gmatch('{"id":%s*"[^"]*"}') do
+              table.insert(notes, { id = note_json:match('"id":%s*"([^"]*)') })
+            end
+            return { notes = notes }
+          end)
+          if success then
+            return result
+          end
+        end
+
+        -- Handle common HTTP API response patterns
+        if str:match('"note"') and str:match('"id"') then
+          local id = str:match('"id":%s*"([^"]*)')
+          return { note = { id = id or "test-id" } }
+        elseif str:match('"status"') then
+          return { status = "ok" }
+        elseif str:match('"success"') then
+          return { success = true }
+        elseif str:match('"total_notes"') then
+          return { total_notes = 42, active_users = 3 }
+        elseif str == "invalid json" or str == "invalid json content" then
+          -- For tests that expect JSON decode to fail
+          error("invalid JSON")
+        end
+      end
+
       return {}
     end,
   },
@@ -286,6 +371,13 @@ _G.vim = {
     end
     return false
   end,
+  tbl_keys = function(tbl)
+    local keys = {}
+    for k, _ in pairs(tbl) do
+      table.insert(keys, k)
+    end
+    return keys
+  end,
   tbl_extend = function(behavior, ...)
     local result = {}
     for _, tbl in ipairs({ ... }) do
@@ -302,10 +394,23 @@ _G.vim = {
     end
     return result
   end,
-  notify = function() end,
+  notify = function(message, level, opts) end,
   schedule = function(fn)
     fn()
   end,
+  schedule_wrap = function(fn)
+    return function(...)
+      fn(...)
+    end
+  end,
+  log = {
+    levels = {
+      ERROR = 1,
+      WARN = 2,
+      INFO = 3,
+      DEBUG = 4,
+    },
+  },
   defer_fn = function(fn)
     fn()
   end,
@@ -411,6 +516,10 @@ function helpers.setup_test_env()
       backend = "json",
       path = "/tmp/screw_test",
       filename = "test_notes.json",
+    },
+    export = {
+      default_format = "markdown",
+      output_dir = "/tmp/screw_test/exports",
     },
   })
 end

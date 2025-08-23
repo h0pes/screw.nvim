@@ -9,6 +9,36 @@ local utils = require("screw.utils")
 
 local M = {}
 
+--- Safely format timestamp for display
+---@param timestamp any
+---@return string
+local function safe_timestamp(timestamp)
+  if not timestamp then
+    return "Unknown"
+  end
+
+  -- If it's already a string, return it
+  if type(timestamp) == "string" then
+    return timestamp
+  end
+
+  -- If it's a table/object with an isoformat method, try to call it
+  if type(timestamp) == "table" and timestamp.isoformat then
+    local ok, result = pcall(timestamp.isoformat, timestamp)
+    if ok then
+      return result
+    end
+  end
+
+  -- If it's a number, assume it's a Unix timestamp
+  if type(timestamp) == "number" then
+    return os.date("%Y-%m-%dT%H:%M:%SZ", timestamp)
+  end
+
+  -- Last resort: convert to string
+  return tostring(timestamp)
+end
+
 --- Current float window handles
 M.current_win = nil
 M.current_buf = nil
@@ -420,7 +450,7 @@ function M.show_note_selection_window(notes, action)
   }
 
   for i, note in ipairs(notes) do
-    table.insert(lines, string.format("[%d] Note by %s (%s)", i, note.author, note.timestamp))
+    table.insert(lines, string.format("[%d] Note by %s (%s)", i, note.author, safe_timestamp(note.timestamp)))
     table.insert(lines, "    State: " .. note.state .. (note.cwe and " | CWE: " .. note.cwe or ""))
     table.insert(lines, "    Comment: " .. (note.comment:sub(1, 60) .. (#note.comment > 60 and "..." or "")))
     table.insert(lines, "")
@@ -489,11 +519,11 @@ function M.open_edit_note_window(note)
     "File: " .. note.file_path,
     "Line: " .. note.line_number,
     "Author: " .. note.author,
-    "Created: " .. note.timestamp,
+    "Created: " .. safe_timestamp(note.timestamp),
   }
 
   if note.updated_at then
-    table.insert(lines, "Updated: " .. note.updated_at)
+    table.insert(lines, "Updated: " .. safe_timestamp(note.updated_at))
   end
 
   -- Add remaining content
@@ -569,6 +599,7 @@ function M.save_edited_note_from_buffer()
   local description = ""
   local cwe = ""
   local state = ""
+  local severity = ""
 
   local current_section = nil
   for i, line in ipairs(lines) do
@@ -580,6 +611,8 @@ function M.save_edited_note_from_buffer()
       current_section = "cwe"
     elseif line:match("^## State") then
       current_section = "state"
+    elseif line:match("^## Severity") then
+      current_section = "severity"
     elseif current_section and line ~= "" and not line:match("^#") and not line:match("^Press") then
       if current_section == "comment" then
         comment = comment .. (comment == "" and "" or "\n") .. line
@@ -589,6 +622,8 @@ function M.save_edited_note_from_buffer()
         cwe = line:gsub("^%s*(.-)%s*$", "%1")
       elseif current_section == "state" then
         state = line:gsub("^%s*(.-)%s*$", "%1")
+      elseif current_section == "severity" then
+        severity = line:gsub("^%s*(.-)%s*$", "%1")
       end
     end
   end
@@ -604,11 +639,30 @@ function M.save_edited_note_from_buffer()
     return
   end
 
+  -- Validate state
+  if not vim.tbl_contains({ "vulnerable", "not_vulnerable", "todo" }, state) then
+    utils.error("Invalid state. Must be: vulnerable, not_vulnerable, or todo")
+    return
+  end
+
+  -- Validate severity
+  if severity ~= "" and not vim.tbl_contains({ "high", "medium", "low", "info" }, severity) then
+    utils.error("Invalid severity. Must be: high, medium, low, or info")
+    return
+  end
+
+  -- Check if severity is required (mandatory for vulnerable state)
+  if state == "vulnerable" and severity == "" then
+    utils.error("Severity is required when state is 'vulnerable'")
+    return
+  end
+
   local updates = {
     comment = comment,
     description = description ~= "" and description or nil,
     cwe = cwe ~= "" and cwe or nil,
     state = state,
+    severity = severity ~= "" and severity or nil,
   }
 
   notes_manager.update_note(M.current_note.id, updates)
@@ -833,7 +887,7 @@ function M.show_reply_selection_window(notes)
   }
 
   for i, note in ipairs(notes) do
-    table.insert(lines, string.format("[%d] Note by %s (%s)", i, note.author, note.timestamp))
+    table.insert(lines, string.format("[%d] Note by %s (%s)", i, note.author, safe_timestamp(note.timestamp)))
     table.insert(lines, "    State: " .. note.state .. (note.cwe and " | CWE: " .. note.cwe or ""))
     table.insert(lines, "    Comment: " .. (note.comment:sub(1, 60) .. (#note.comment > 60 and "..." or "")))
     table.insert(lines, "")
@@ -874,8 +928,13 @@ end
 function M.open_reply_window(note)
   M.close_float_window()
 
+  -- Count existing replies for window title
+  local reply_count = (note.replies and #note.replies) or 0
+  local window_title = reply_count > 0 and ("Reply to Note (Thread: " .. reply_count .. " existing replies)")
+    or "Reply to Note"
+
   local win, buf = M.create_float_window({
-    title = "Reply to Note",
+    title = window_title,
     width = 80,
     height = 20,
   })
@@ -885,33 +944,53 @@ function M.open_reply_window(note)
   M.current_mode = "reply"
   M.current_note = note
 
-  -- Set buffer content
+  -- Set buffer content with enhanced original note information
+  local buffer_title = reply_count > 0 and ("# Reply to Note (Thread: " .. reply_count .. " existing replies)")
+    or "# Reply to Note"
+
   local lines = {
-    "# Reply to Note",
+    buffer_title,
     "",
-    "Original Note by: " .. note.author,
-    "## Comment",
-    note.comment:sub(1, 80) .. (#note.comment > 80 and "..." or ""),
-    "",
-    "## State",
-    note.state,
+    "## Original Note",
+    "File: " .. note.file_path,
+    "Line: " .. note.line_number,
+    "Author: " .. note.author,
+    "Created: " .. safe_timestamp(note.timestamp),
+    "State: " .. note.state,
   }
 
-  if note.cwe then
-    table.insert(lines, "")
-    table.insert(lines, "## CWE")
-    table.insert(lines, note.cwe)
+  if note.severity then
+    table.insert(lines, "Severity: " .. note.severity)
   end
+
+  if note.cwe then
+    table.insert(lines, "CWE: " .. note.cwe)
+  end
+
+  if note.description then
+    table.insert(lines, "")
+    table.insert(lines, "Description: " .. note.description)
+  end
+
+  table.insert(lines, "")
+  table.insert(lines, "Comment: " .. note.comment)
 
   -- Add reply section
   local reply_lines = {
     "",
-    "## Your Reply",
-    "",
-    "",
-    "",
-    "Press <CR> to save, <Esc> to close",
   }
+
+  -- Add helpful instruction if there are existing replies
+  if reply_count > 0 then
+    table.insert(reply_lines, "Tip: Use 'Screw note view' to read existing replies before responding")
+    table.insert(reply_lines, "")
+  end
+
+  table.insert(reply_lines, "## Your Reply")
+  table.insert(reply_lines, "")
+  table.insert(reply_lines, "")
+  table.insert(reply_lines, "")
+  table.insert(reply_lines, "Press <CR> to save, <Esc> to close")
 
   for _, line in ipairs(reply_lines) do
     table.insert(lines, line)
@@ -1038,11 +1117,15 @@ function M.show_notes_window(notes, title)
     table.insert(lines, "")
     table.insert(lines, "File: " .. note.file_path .. ":" .. note.line_number)
     table.insert(lines, "Author: " .. note.author)
-    table.insert(lines, "Created: " .. note.timestamp)
+    table.insert(lines, "Created: " .. safe_timestamp(note.timestamp))
     if note.updated_at then
-      table.insert(lines, "Updated: " .. note.updated_at)
+      table.insert(lines, "Updated: " .. safe_timestamp(note.updated_at))
     end
     table.insert(lines, "State: " .. note.state)
+
+    if note.severity then
+      table.insert(lines, "Severity: " .. note.severity)
+    end
 
     if note.cwe then
       table.insert(lines, "CWE: " .. note.cwe)
@@ -1076,7 +1159,7 @@ function M.show_notes_window(notes, title)
           lines,
           "────────────────────────────────────────────────────────────────────────────────"
         )
-        table.insert(lines, "From: " .. reply.author .. " | Date: " .. reply.timestamp)
+        table.insert(lines, "From: " .. reply.author .. " | Date: " .. safe_timestamp(reply.timestamp))
         table.insert(lines, "")
         table.insert(lines, reply.comment)
         table.insert(lines, "")

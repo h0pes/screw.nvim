@@ -46,17 +46,20 @@ end
 ---@return string
 function M.get_relative_path(filepath)
   local project_root = M.get_project_root()
+
   -- Ensure both paths are absolute and normalized
   local abs_filepath = vim.fn.fnamemodify(filepath, ":p")
   local abs_project_root = vim.fn.fnamemodify(project_root, ":p")
 
-  -- Remove trailing slash from project root if present
-  abs_project_root = abs_project_root:gsub("/$", "")
+  -- Ensure trailing slash for comparison
+  abs_project_root = abs_project_root:gsub("/$", "") .. "/"
 
   if abs_filepath:sub(1, #abs_project_root) == abs_project_root then
-    local relative = abs_filepath:sub(#abs_project_root + 2) -- Remove leading slash
-    return relative == "" and "." or relative
+    local relative = abs_filepath:sub(#abs_project_root + 1) -- Remove project root and slash
+    local result = relative == "" and "." or relative
+    return result
   end
+
   return abs_filepath -- Return absolute if outside project
 end
 
@@ -214,6 +217,11 @@ function M.get_buffer_info()
   local cursor = vim.api.nvim_win_get_cursor(0)
   local filepath = vim.api.nvim_buf_get_name(bufnr)
 
+  -- Handle test environment where cursor might be nil
+  if not cursor then
+    cursor = { 1, 0 }
+  end
+
   return {
     bufnr = bufnr,
     filepath = filepath,
@@ -252,6 +260,14 @@ end
 --- Get project root directory
 ---@return string
 function M.get_project_root()
+  -- Clear cache if it appears to be a subdirectory (corrupted)
+  if vim.g.screw_project_root then
+    -- Check if cached path contains git directory
+    if vim.fn.isdirectory(vim.g.screw_project_root .. "/.git") ~= 1 then
+      vim.g.screw_project_root = nil
+    end
+  end
+
   -- Return cached value if available
   if vim.g.screw_project_root then
     return vim.g.screw_project_root
@@ -259,8 +275,10 @@ function M.get_project_root()
 
   -- Try to find git root by going up the directory tree from current file
   local current_file = vim.fn.expand("%:p")
+
   if current_file and current_file ~= "" then
     local dir = vim.fn.fnamemodify(current_file, ":h")
+
     while dir and dir ~= "/" and dir ~= "." do
       if vim.fn.isdirectory(dir .. "/.git") == 1 then
         vim.g.screw_project_root = dir
@@ -274,8 +292,28 @@ function M.get_project_root()
     end
   end
 
-  -- Try git command from current working directory
+  -- Try git command from current file's directory
+  if current_file and current_file ~= "" then
+    local file_dir = vim.fn.fnamemodify(current_file, ":h")
+
+    -- Change to file directory temporarily
+    local old_cwd = vim.fn.getcwd()
+    vim.fn.chdir(file_dir)
+
+    local git_root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
+
+    -- Restore original directory
+    vim.fn.chdir(old_cwd)
+
+    if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
+      vim.g.screw_project_root = git_root
+      return git_root
+    end
+  end
+
+  -- Try git command from current working directory as fallback
   local git_root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
+
   if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
     vim.g.screw_project_root = git_root
     return git_root

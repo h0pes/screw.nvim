@@ -214,11 +214,13 @@ screw.nvim comes with the following defaults:
     },
   },
 
-  -- Collaboration configuration
+  -- Collaboration configuration (HTTP multi-user support)
   collaboration = {
-    enabled = false,            -- Enable real-time collaboration
-    database_url = "",          -- RethinkDB connection URL
-    sync_interval = 1000,       -- Sync interval in milliseconds
+    enabled = false,           -- Enable HTTP collaboration (disabled by default)
+    api_url = nil,            -- HTTP API URL (from SCREW_API_URL env var)
+    user_id = nil,            -- User ID (from SCREW_USER_EMAIL/SCREW_USER_ID env)
+    connection_timeout = 10000, -- HTTP request timeout (ms)
+    max_retries = 3,          -- Max connection retry attempts
   },
 
   -- Export configuration
@@ -292,20 +294,36 @@ screw.nvim comes with the following defaults:
 </details>
 
 <details>
-<summary>Collaboration mode with RethinkDB</summary>
+<summary>HTTP collaboration mode</summary>
 
+**Prerequisites:**
+```bash
+# Deploy collaboration server
+./deploy_server.sh
+
+# Set environment variables
+export SCREW_API_URL="http://your-server:3000/api"
+export SCREW_USER_EMAIL="analyst@company.com"
+```
+
+**Configuration:**
 ```lua
 {
   "h0pes/screw.nvim",
   opts = {
+    storage = {
+      backend = "http",  -- Use HTTP backend for collaboration
+    },
     collaboration = {
       enabled = true,
-      database_url = "rethinkdb://localhost:28015/security_notes",
-      sync_interval = 500
+      connection_timeout = 10000,  -- 10 second timeout
+      max_retries = 3,
     }
   }
 }
 ```
+
+> **Note**: See [Collaboration Guide](COLLABORATION.md) for complete setup instructions.
 
 </details>
 
@@ -572,6 +590,7 @@ End of thread
 - **Path completion**: Tab complete for output file paths
 - **Automatic timestamping**: Files auto-named with timestamp if no path specified
 - **Filtered exports**: Only export notes matching specific criteria
+- **🤝 Collaboration mode**: Export works seamlessly with both local storage and collaboration databases (PostgreSQL/HTTP API)
 
 **SARIF Export Features:**
 - **SARIF v2.1.0 compliant** - Full compatibility with industry standard
@@ -607,6 +626,7 @@ End of thread
 - **⚡ Batch processing** - Import hundreds of findings efficiently
 - **🎯 Path resolution** - Automatically converts absolute paths to project-relative paths
 - **🔍 CWE extraction** - Automatically extracts CWE classifications from SARIF rule metadata
+- **🤝 Collaboration mode** - Import works seamlessly with both local storage and collaboration databases (PostgreSQL/HTTP API)
 
 **Collision Handling:**
 When importing finds conflicts with existing notes, you can choose to:
@@ -905,28 +925,93 @@ end)
 
 ## :busts_in_silhouette: Collaboration
 
-Enable real-time collaboration for team security reviews:
+**HTTP-powered multi-user security reviews** with zero client dependencies, real-time synchronization, offline support, and enterprise-grade scalability.
 
+### :rocket: Quick Setup
+
+**1. Deploy collaboration server:**
+```bash
+# Run the automated deployment script
+./deploy_server.sh
+```
+
+**2. Configure client environment:**
+```bash
+export SCREW_API_URL="http://your-server:3000/api"
+export SCREW_USER_EMAIL="analyst@company.com"
+```
+
+**3. Enable collaboration in your plugin configuration:**
 ```lua
 require("screw").setup({
+  storage = {
+    backend = "http",  -- Use HTTP backend
+  },
   collaboration = {
     enabled = true,
-    database_url = "rethinkdb://localhost:28015/screw_db",
-    sync_interval = 1000,
   }
 })
 ```
 
-> [!WARNING]
-> Collaboration features require a RethinkDB instance. See [collaboration setup guide](docs/collaboration.md) for details.
+### :sparkles: Key Features
 
-Features:
-- **Real-time sync** - Changes propagate to all team members
-- **Conflict resolution** - Automatic merge with last-writer-wins strategy  
-- **Presence awareness** - See who's online and their cursor positions
-- **Offline support** - Graceful handling of network interruptions
-- **Threaded discussions** - Full reply support with BBS-style display
-- **Author validation** - Edit/delete permissions respected across team members
+- **🌐 Zero Dependencies** - No PostgreSQL drivers needed on clients, just curl
+- **📡 HTTP-based Architecture** - Simple REST API with FastAPI server and PostgreSQL backend
+- **🔄 Real-time sync** - See changes from other users instantly via cache refresh
+- **📡 Offline mode** - Automatic graceful degradation with operation queuing
+- **🚀 Easy Deployment** - Single Python server with automated deployment scripts
+- **👤 User ownership** - Only note authors can edit/delete their notes, others can reply
+- **⚡ Performance optimized** - Efficient local caching and connection management
+- **🔐 Secure by design** - Environment-based credentials, HTTPS support, firewall-friendly
+- **📊 Full import/export support** - All import/export functionality works identically in collaboration mode
+
+### :computer: Collaboration Commands
+
+```vim
+" Core collaboration
+:Screw status                     " Show collaboration connection status
+:Screw sync                       " Manual synchronization with server
+:Screw reconnect                  " Force server reconnection
+
+" All note operations automatically sync in collaborative mode
+:Screw note add                   " Create note (syncs to server)
+:Screw note edit                  " Edit note (syncs to server)
+:Screw note delete                " Delete note (syncs to server)
+:Screw note reply                 " Add reply (syncs to server)
+```
+
+### :gear: Advanced Configuration
+
+```lua
+-- Minimal setup - uses default local mode
+require("screw").setup()
+
+-- Enable collaborative mode with custom settings
+require("screw").setup({
+  storage = {
+    backend = "http",  -- Use HTTP backend for collaboration
+  },
+  collaboration = {
+    enabled = true,
+    connection_timeout = 10000,   -- 10 second HTTP timeout
+    max_retries = 3,             -- Connection retry attempts
+  }
+})
+```
+
+### :warning: Environment Setup
+
+**Required environment variables for collaboration:**
+```bash
+# HTTP API server connection (required)
+export SCREW_API_URL="http://your-server:3000/api"
+
+# User identification (required - choose one)
+export SCREW_USER_EMAIL="your.email@company.com"
+export SCREW_USER_ID="your-username"
+```
+
+> **📖 Complete Guide**: See [COLLABORATION.md](COLLABORATION.md) for detailed setup instructions, server deployment, HTTP API configuration, troubleshooting, and advanced usage patterns.
 
 ### Threaded Discussions
 
@@ -1026,8 +1111,8 @@ The enhanced health check system validates:
 
 #### **👥 Collaboration Features**
 - ✅ Collaboration module loading
-- ✅ Database URL configuration and format
-- ✅ RethinkDB connectivity (basic checks)
+- ✅ API URL configuration and format
+- ✅ HTTP server connectivity (basic checks)
 - ✅ Sync mechanism functionality
 
 #### **⚠️ Issue Detection**
@@ -1096,9 +1181,9 @@ If health checks fail:
 ## :warning: Requirements
 
 - **Neovim** >= 0.9.0
+- **curl** (usually pre-installed, for HTTP collaboration)
 - **No external dependencies** for basic functionality
 - **telescope.nvim** (optional, for search functionality)
-- **RethinkDB** (optional, for collaboration features)
 
 ## :zap: Performance & Lazy Loading
 

@@ -195,12 +195,12 @@ function M.place_buffer_signs(bufnr)
     end
   end
 
+  -- Clear existing signs for this buffer
+  M.clear_buffer_signs(bufnr)
+
   if #file_notes == 0 then
     return
   end
-
-  -- Clear existing signs for this buffer
-  M.clear_buffer_signs(bufnr)
 
   -- Group notes by line number
   local notes_by_line = {}
@@ -299,12 +299,10 @@ end
 --- Clear all signs for a buffer
 ---@param bufnr number
 function M.clear_buffer_signs(bufnr)
-  if not signs_by_buffer[bufnr] then
-    return
-  end
-
-  -- Remove all signs for this buffer
+  -- Remove all signs for this buffer (always call unplace to ensure cleanup)
   vim.fn.sign_unplace("screw", { buffer = bufnr })
+
+  -- Reset tracking for this buffer
   signs_by_buffer[bufnr] = {}
 end
 

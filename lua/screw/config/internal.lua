@@ -15,9 +15,9 @@ end
 
 ---@class screw.InternalConfig
 local default_config = {
-  ---@type "json"|"sqlite"
+  ---@type "json"|"sqlite"|"http"
   storage = {
-    ---@type "json"|"sqlite"
+    ---@type "json"|"sqlite"|"http"
     backend = "json",
     ---@type string
     path = "", -- Will be set dynamically
@@ -59,10 +59,18 @@ local default_config = {
   collaboration = {
     ---@type boolean
     enabled = false,
-    ---@type string
-    database_url = "",
+    ---@type string?
+    api_url = nil, -- From SCREW_API_URL environment variable
+    ---@type string?
+    user_id = nil, -- From SCREW_USER_EMAIL or SCREW_USER_ID
+    ---@type string?
+    project_name = nil, -- Auto-detected from git/directory
     ---@type number
-    sync_interval = 1000,
+    sync_interval = 5000, -- HTTP polling interval (ms)
+    ---@type number
+    connection_timeout = 10000, -- Connection timeout (ms)
+    ---@type number
+    max_retries = 3, -- Max connection retry attempts
   },
   ---@type table
   export = {
@@ -147,7 +155,15 @@ local function validate_config_structure(config)
     ui = { "float_window", "highlights" },
     float_window = { "width", "height", "border", "winblend" },
     highlights = { "note_marker", "vulnerable", "not_vulnerable", "todo", "field_title", "field_info" },
-    collaboration = { "enabled", "database_url", "sync_interval" },
+    collaboration = {
+      "enabled",
+      "api_url",
+      "user_id",
+      "project_name",
+      "sync_interval",
+      "connection_timeout",
+      "max_retries",
+    },
     export = { "default_format", "output_dir" },
     import = { "sarif", "auto_map_cwe" },
     sarif = { "collision_strategy", "default_author", "preserve_metadata", "show_progress" },
@@ -233,10 +249,10 @@ local function validate_config_values(config)
     {
       "storage.backend",
       function(v)
-        return vim.tbl_contains({ "json", "sqlite" }, v)
+        return vim.tbl_contains({ "json", "sqlite", "http" }, v)
       end,
       config.storage.backend,
-      "must be 'json' or 'sqlite'",
+      "must be 'json', 'sqlite', or 'http'",
     },
     { "storage.path", "string", config.storage.path },
     { "storage.filename", "string", config.storage.filename },
@@ -267,8 +283,12 @@ local function validate_config_values(config)
     -- Collaboration validations
     { "collaboration", "table", config.collaboration },
     { "collaboration.enabled", "boolean", config.collaboration.enabled },
-    { "collaboration.database_url", "string", config.collaboration.database_url },
+    { "collaboration.api_url", { "string", "nil" }, config.collaboration.api_url },
+    { "collaboration.user_id", { "string", "nil" }, config.collaboration.user_id },
+    { "collaboration.project_name", { "string", "nil" }, config.collaboration.project_name },
     { "collaboration.sync_interval", "number", config.collaboration.sync_interval },
+    { "collaboration.connection_timeout", "number", config.collaboration.connection_timeout },
+    { "collaboration.max_retries", "number", config.collaboration.max_retries },
 
     -- Export validations
     { "export", "table", config.export },
@@ -360,6 +380,14 @@ local function validate_config_values(config)
 
   if config.collaboration.sync_interval <= 0 then
     return false, "collaboration.sync_interval must be greater than 0"
+  end
+
+  if config.collaboration.connection_timeout <= 0 then
+    return false, "collaboration.connection_timeout must be greater than 0"
+  end
+
+  if config.collaboration.max_retries < 0 then
+    return false, "collaboration.max_retries must be non-negative"
   end
 
   return true
