@@ -1,19 +1,53 @@
 *screw-news.txt*
 
-Notable changes since screw 1.0
+Notable changes in screw.nvim - Security Code Review Plugin
 
 
 ===============================================================================
 NEW FEATURES                                     *screw-new-features*
 
-- Added llscheck.yml - A GitHub workflow that detects type annotation issues!
-- Added urlchecker.yml - A GitHub workflow that finds broken URLs!
+Since v1.0.0:
+- Security-focused note system with CWE classification and severity levels
+- Real-time collaboration support with HTTP-based multi-user functionality  
+- SARIF import/export for integration with SAST tools (Semgrep, Bandit, Gosec)
+- Visual signcolumn indicators with color-coded vulnerability states
+- Threaded discussion system for collaborative security reviews
+- Telescope integration for advanced search across security notes
+- Comprehensive export formats: Markdown, JSON, CSV, and SARIF
+- Automated documentation generation with API reference and type definitions
+- Complete CI/CD automation with quality checks and release management
+- Health check system for comprehensive troubleshooting
+
+Recent additions:
+- Enhanced documentation automation with API generation using mini.doc
+- Vim help tags generation for improved help system navigation
+- News.txt PR validation to ensure changelog maintenance
+- Comprehensive Makefile targets for all development workflows
 
 
 ===============================================================================
 BREAKING CHANGES                                 *screw-new-breaking*
 
-n/a
+n/a - Initial major version maintains backward compatibility
+
+
+===============================================================================
+MIGRATION GUIDE                                  *screw-migration-guide*
+
+For users migrating from other security review tools:
+- RefactorSecurity VSCode users: See MIGRATION.md for feature mapping
+- Manual note-taking workflows: Use :Screw import to migrate existing findings
+- SARIF-based tools: Direct import support available via :Screw import sarif
+
+
+===============================================================================
+DEVELOPMENT NOTES                               *screw-development-notes*
+
+- Plugin follows nvim-best-practices for maximum compatibility
+- Zero-configuration setup with intelligent defaults
+- Lazy loading ensures < 5ms startup time impact
+- Comprehensive test suite with >90% coverage target
+- Full LuaCATS type annotations for LSP support
 
 
  vim:tw=78:ts=8:noet:ft=help:norl:

@@ -8,9 +8,10 @@ This document provides a comprehensive overview of all automation features imple
 2. [GitHub Actions CI/CD](#2-github-actions-cicd)
 3. [Automated Release System](#3-automated-release-system)
 4. [Documentation Generation](#4-documentation-generation)
-5. [Issue & PR Templates](#5-issue--pr-templates)
-6. [Dependency Management](#6-dependency-management)
-7. [Complete Development Workflow](#7-complete-development-workflow)
+5. [News Update Validation](#5-news-update-validation)
+6. [Issue & PR Templates](#6-issue--pr-templates)
+7. [Dependency Management](#7-dependency-management)
+8. [Complete Development Workflow](#8-complete-development-workflow)
 
 ---
 
@@ -67,9 +68,33 @@ PATH="/home/marco/.luarocks/bin:$PATH" make format-check
 ```bash
 PATH="/home/marco/.luarocks/bin:$PATH" make docs
 ```
-- **What it does:** Generates vim help documentation from README.md
-- **Expected output:** Updated `doc/screw.txt` file
+- **What it does:** Generates vim help documentation from README.md using panvimdoc
+- **Expected output:** Updated `doc/screw.nvim.txt` file
 - **Use when:** After updating README.md or adding new features
+
+#### API Documentation Generation
+```bash
+PATH="/home/marco/.luarocks/bin:$PATH" make api-documentation
+```
+- **What it does:** Generates API documentation from LuaCATS annotations using mini.doc
+- **Expected output:** Updated `doc/screw_api.txt` and `doc/screw_types.txt` files
+- **Use when:** After updating function signatures, types, or adding new API functions
+
+#### Vim Help Tags Generation
+```bash
+PATH="/home/marco/.luarocks/bin:$PATH" make vimtags
+```
+- **What it does:** Generates vim help tags for improved help system navigation
+- **Expected output:** Updated `doc/tags` file
+- **Use when:** After generating new documentation files
+
+#### Complete Documentation Generation
+```bash
+PATH="/home/marco/.luarocks/bin:$PATH" make docs-all
+```
+- **What it does:** Generates all documentation (user docs + API docs + vim tags)
+- **Expected output:** All documentation files updated
+- **Use when:** Before releases or comprehensive documentation updates
 
 #### All Checks
 ```bash
@@ -90,7 +115,10 @@ PATH="/home/marco/.luarocks/bin:$PATH" make clean
 ### Workflow
 1. **Development:** Run `make test` frequently during coding
 2. **Pre-commit:** Run `make check` to ensure all quality gates pass
-3. **Documentation updates:** Run `make docs` after README changes
+3. **Documentation updates:** 
+   - Run `make docs` after README changes
+   - Run `make api-documentation` after API changes
+   - Run `make docs-all` for comprehensive documentation updates
 4. **Coverage analysis:** Run `make coverage` periodically
 
 ---
@@ -216,6 +244,7 @@ Automatically generates and maintains plugin documentation from source code and 
 ### What it does
 - **Vim help docs:** Converts README.md to vim help format using panvimdoc
 - **API documentation:** Generates API docs from source code using mini.doc
+- **Vim help tags:** Generates help tags for improved navigation
 - **Auto-commit:** Commits documentation updates back to repository
 
 ### Triggers
@@ -223,8 +252,10 @@ Automatically generates and maintains plugin documentation from source code and 
 - Manual workflow dispatch
 
 ### Expected Output
-- Updated `doc/screw.txt` (vim help documentation)
-- Updated `doc/api.md` (API reference)
+- Updated `doc/screw.nvim.txt` (vim help documentation)
+- Updated `doc/screw_api.txt` (API reference)
+- Updated `doc/screw_types.txt` (type definitions)
+- Updated `doc/tags` (vim help tags)
 - Automatic commits with documentation updates
 
 ### Workflow Steps
@@ -245,29 +276,77 @@ Automatically generates and maintains plugin documentation from source code and 
    ```
 
 3. **API Documentation**
-   - Scans source files for LuaCATS annotations
-   - Generates structured API documentation
+   - Uses `make api-documentation` to run mini.doc generation
+   - Scans `lua/screw/init.lua`, `lua/screw/types.lua`, and `lua/screw/config/meta.lua`
+   - Generates `doc/screw_api.txt` and `doc/screw_types.txt`
    - Creates cross-references and links
 
-4. **Auto-commit**
-   - Commits generated documentation
+4. **Vim Help Tags Generation**
+   - Runs `nvim --headless -c 'helptags doc' -c 'quit'`
+   - Updates `doc/tags` file for improved help navigation
+
+5. **Auto-commit**
+   - Commits all generated documentation
    - Pushes back to main branch
 
 ### Usage
 - **Automatic:** Runs on main branch pushes
 - **Manual:** Trigger from GitHub Actions tab
-- **Local:** Use `make docs` for local generation
+- **Local:** Use `make docs` for user docs, `make api-documentation` for API docs, or `make docs-all` for everything
 
 ### User Access
 After generation, users can access documentation via:
 ```vim
-:help screw.nvim
-:help screw-api
+:help screw.nvim        " User documentation
+:help screw_api         " API reference  
+:help screw_types       " Type definitions
 ```
 
 ---
 
-## 5. Issue & PR Templates
+## 5. News Update Validation
+
+**Configuration File:** [`.github/workflows/news.yml`](./.github/workflows/news.yml)
+
+### Purpose
+Ensures that pull requests with new features or breaking changes include appropriate updates to `doc/news.txt`, maintaining a comprehensive changelog for users.
+
+### What it does
+- **Feature detection:** Identifies commits with `feat:` prefix or feature indicators
+- **Breaking change detection:** Identifies commits with `!` markers indicating breaking changes
+- **News.txt validation:** Checks if `doc/news.txt` was updated in the PR
+- **PR blocking:** Prevents merging PRs that introduce changes without documentation
+
+### Triggers
+- Pull request creation/updates
+- PR ready for review (not draft PRs)
+
+### Expected Output
+- ✅ **Pass:** PR includes news.txt updates for new features/breaking changes, or contains only minor changes
+- ❌ **Fail:** PR introduces significant changes but doesn't update news.txt
+
+### Workflow Logic
+1. **Commit Analysis**
+   - Scans all commits in the PR
+   - Identifies feature commits (feat:, feat(), feat prefix)
+   - Identifies breaking changes (! marker in commit messages)
+
+2. **News.txt Check**
+   - Verifies if `doc/news.txt` was modified in the PR
+   - Compares required updates vs. actual changes
+
+3. **Validation Result**
+   - Passes if no significant changes or news.txt updated appropriately
+   - Fails with helpful message explaining what needs to be updated
+
+### Usage
+- **Automatic:** Runs on every non-draft PR
+- **Bypass:** Add `[skip news]` to commit message for minor changes
+- **Fix:** Update `doc/news.txt` with new features or breaking changes
+
+---
+
+## 6. Issue & PR Templates
 
 **Configuration Files:**
 - [`.github/ISSUE_TEMPLATE/bug_report.yml`](./.github/ISSUE_TEMPLATE/bug_report.yml)
@@ -322,7 +401,7 @@ Standardizes issue reporting and pull request submissions to improve quality and
 
 ---
 
-## 6. Dependency Management
+## 7. Dependency Management
 
 **Configuration File:** [`.github/dependabot.yml`](./.github/dependabot.yml)
 
@@ -358,7 +437,7 @@ updates:
 
 ---
 
-## 7. Complete Development Workflow
+## 8. Complete Development Workflow
 
 ### Daily Development
 1. **Start work:**
