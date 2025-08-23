@@ -1,8 +1,13 @@
+ScrewNote	screw_types.txt	/*ScrewNote*
+ScrewReply	screw_types.txt	/*ScrewReply*
+screw-api-functions	screw_api.txt	/*screw-api-functions*
+screw-core-types	screw_types.txt	/*screw-core-types*
 screw-development-notes	news.txt	/*screw-development-notes*
 screw-migration-guide	news.txt	/*screw-migration-guide*
 screw-new-breaking	news.txt	/*screw-new-breaking*
 screw-new-features	news.txt	/*screw-new-features*
 screw-news.txt	news.txt	/*screw-news.txt*
+screw.Config	screw_types.txt	/*screw.Config*
 screw.nvim-screw.nvim	screw.nvim.txt	/*screw.nvim-screw.nvim*
 screw.nvim-screw.nvim-acknowledgments	screw.nvim.txt	/*screw.nvim-screw.nvim-acknowledgments*
 screw.nvim-screw.nvim-api	screw.nvim.txt	/*screw.nvim-screw.nvim-api*
@@ -22,3 +27,5 @@ screw.nvim-screw.nvim-requirements	screw.nvim.txt	/*screw.nvim-screw.nvim-requir
 screw.nvim-screw.nvim-sast-integration	screw.nvim.txt	/*screw.nvim-screw.nvim-sast-integration*
 screw.nvim-table-of-contents	screw.nvim.txt	/*screw.nvim-table-of-contents*
 screw.nvim.txt	screw.nvim.txt	/*screw.nvim.txt*
+screw_api.txt	screw_api.txt	/*screw_api.txt*
+screw_types.txt	screw_types.txt	/*screw_types.txt*
