@@ -60,6 +60,20 @@ describe("screw.signs", function()
       end,
     }
 
+    -- Mock storage module
+    package.loaded["screw.notes.storage"] = {
+      is_initialized = function()
+        return true -- For tests, assume storage is always initialized
+      end,
+    }
+
+    -- Mock main screw module
+    package.loaded["screw"] = {
+      get_notes = function()
+        return mock_notes or {}
+      end,
+    }
+
     -- Track sign operations
     _G.test_signs_placed = {}
     _G.test_signs_removed = {}
