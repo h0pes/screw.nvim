@@ -1,0 +1,563 @@
+--- Main API module for screw.nvim
+---
+--- This module provides the public API for the security code review plugin.
+--- The plugin automatically initializes with sensible defaults - setup() is optional.
+---
+
+local M = {}
+
+-- Plugin state tracking
+local _initialized = false
+local _user_config = nil
+
+--- Track component initialization
+local _components = {
+  config = false,
+  collaboration = false,
+  notes = false,
+  signs = false,
+  lualine = false,
+}
+
+--- Ensure basic configuration is loaded
+local function ensure_config_initialized()
+  if _components.config then
+    return
+  end
+
+  -- Initialize project root early and store it
+  local utils = require("screw.utils")
+  local project_root = utils.get_project_root()
+  vim.g.screw_project_root = project_root
+
+  local config = require("screw.config")
+
+  -- If no user config from setup(), try to get it from various sources
+  local user_config_to_use = _user_config
+  if not user_config_to_use and vim.g.screw_config then
+    user_config_to_use = vim.g.screw_config
+  end
+
+  -- Try to get config from lazy.nvim plugin spec
+  if not user_config_to_use then
+    local lazy_ok, lazy_core = pcall(require, "lazy.core.config")
+    if lazy_ok and lazy_core.spec and lazy_core.spec.plugins then
+      for _, plugin in pairs(lazy_core.spec.plugins) do
+        if plugin.name == "screw.nvim" and plugin.opts then
+          user_config_to_use = plugin.opts
+          break
+        end
+      end
+    end
+  end
+
+  config.setup(user_config_to_use)
+
+  _components.config = true
+end
+
+--- Ensure collaboration is initialized
+local function ensure_collaboration_initialized()
+  if _components.collaboration then
+    return
+  end
+
+  ensure_config_initialized()
+  local collaboration = require("screw.collaboration")
+  collaboration.setup()
+
+  _components.collaboration = true
+end
+
+--- Ensure notes system is initialized
+local function ensure_notes_initialized()
+  if _components.notes then
+    return
+  end
+
+  ensure_config_initialized()
+  ensure_collaboration_initialized()
+
+  -- Initialize UI first (safe, no dependencies)
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.setup()
+
+  -- Then initialize notes manager (triggers storage)
+  local notes_manager = require("screw.notes.manager")
+  notes_manager.setup()
+
+  _components.notes = true
+end
+
+--- Ensure signs are initialized
+local function ensure_signs_initialized()
+  if _components.signs then
+    return
+  end
+
+  ensure_config_initialized()
+  local signs = require("screw.signs")
+  signs.setup()
+
+  _components.signs = true
+end
+
+--- Ensure lualine integration is initialized (if enabled)
+local function ensure_lualine_initialized()
+  if _components.lualine then
+    return
+  end
+
+  ensure_config_initialized()
+  local config_obj = require("screw.config").get()
+  if config_obj.lualine and config_obj.lualine.enabled then
+    local lualine_integration = require("screw.lualine")
+    lualine_integration.setup()
+  end
+
+  _components.lualine = true
+end
+
+--- Ensure plugin is initialized with sensible defaults (without storage)
+local function ensure_initialized()
+  if _initialized then
+    return
+  end
+
+  ensure_config_initialized()
+  -- Initialize collaboration (shows loading message, no storage dependency)
+  ensure_collaboration_initialized()
+  -- Initialize signs for visual indicators (no storage dependency)
+  ensure_signs_initialized()
+  -- Initialize lualine integration
+  ensure_lualine_initialized()
+
+  -- Set up autocommands for project lifecycle
+  local augroup = vim.api.nvim_create_augroup("ScrewNvim", { clear = true })
+
+  -- Handle files that may have notes but aren't in the ft list
+  -- This ensures signs appear for any file that has notes, regardless of filetype
+  vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    group = augroup,
+    callback = function(args)
+      local bufnr = args.buf
+      -- Only proceed for regular files
+      local buftype = vim.api.nvim_buf_get_option(bufnr, "buftype")
+      if buftype ~= "" then
+        return
+      end
+
+      local filepath = vim.api.nvim_buf_get_name(bufnr)
+      if not filepath or filepath == "" then
+        return
+      end
+
+      -- If signs are not initialized yet, check if we should initialize due to existing notes
+      if not _components.signs then
+        local signs = require("screw.signs")
+        if signs.check_notes_exist() then
+          -- Initialize signs because we have existing notes
+          ensure_signs_initialized()
+          -- Place signs for this buffer
+          signs.place_buffer_signs(bufnr)
+        end
+      end
+    end,
+  })
+
+  -- Save notes when leaving Neovim (only if notes were used)
+  vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = augroup,
+    callback = function()
+      if _components.notes then
+        local storage = require("screw.notes.storage")
+        storage.force_save()
+      end
+
+      if _components.collaboration then
+        local collaboration = require("screw.collaboration")
+        collaboration.cleanup()
+      end
+    end,
+  })
+
+  -- Refresh lualine to show screw components now that plugin is loaded
+  vim.defer_fn(function()
+    if pcall(require, "lualine") then
+      require("lualine").refresh()
+    end
+  end, 200)
+
+  _initialized = true
+end
+
+--- Initialize the plugin (optional - plugin works without calling this)
+---@param user_config screw.Config?
+function M.setup(user_config)
+  _user_config = user_config
+  -- Don't initialize notes during setup - wait until they're actually needed
+  ensure_config_initialized()
+end
+
+--- Create a new note at the current cursor position
+---@param opts table?
+---@return ScrewNote?
+function M.create_note(opts)
+  ensure_notes_initialized()
+  ensure_signs_initialized()
+  opts = opts or {}
+
+  local notes_ui = require("screw.notes.ui")
+  local notes_manager = require("screw.notes.manager")
+
+  -- If no comment provided, open UI to create note
+  if not opts.comment then
+    notes_ui.open_create_note_window()
+    return nil
+  end
+
+  return notes_manager.create_note(opts)
+end
+
+--- View notes for the current line
+function M.view_current_line_notes()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_view_notes_window()
+end
+
+--- View all notes for the current file
+function M.view_current_file_notes()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_file_notes_window()
+end
+
+--- View all notes in the project
+function M.view_all_notes()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_all_notes_window()
+end
+
+--- Get notes for the current line
+---@return ScrewNote[]
+function M.get_current_line_notes()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {}
+  end
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.get_current_line_notes()
+end
+
+--- Get notes for the current file
+---@return ScrewNote[]
+function M.get_current_file_notes()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {}
+  end
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.get_current_file_notes()
+end
+
+--- Get all notes
+---@param filter ScrewNoteFilter?
+---@return ScrewNote[]
+function M.get_notes(filter)
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {}
+  end
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.get_notes(filter)
+end
+
+--- Update a note
+---@param id string
+---@param updates table
+---@return boolean
+function M.update_note(id, updates)
+  ensure_notes_initialized()
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.update_note(id, updates)
+end
+
+--- Edit a note (opens UI for note selection if multiple notes on line)
+function M.edit_note()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_edit_current_line_notes()
+end
+
+--- Delete a note (opens UI for note selection if multiple notes on line)
+function M.delete_note()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_delete_current_line_notes()
+end
+
+--- Delete all notes in current file (with confirmation)
+function M.delete_current_file_notes()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.delete_current_file_notes_with_confirmation()
+end
+
+--- Delete all notes in project (with confirmation)
+function M.delete_all_project_notes()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.delete_all_project_notes_with_confirmation()
+end
+
+--- Delete a note by ID (for programmatic use)
+---@param id string
+---@return boolean
+function M.delete_note_by_id(id)
+  ensure_notes_initialized()
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.delete_note(id)
+end
+
+--- Reply to a note (opens UI for note selection if multiple notes on line)
+function M.reply_to_note()
+  ensure_notes_initialized()
+  local notes_ui = require("screw.notes.ui")
+  notes_ui.open_reply_current_line_notes()
+end
+
+--- Add a reply to a note (for programmatic use)
+---@param parent_id string
+---@param comment string
+---@param author string?
+---@return boolean
+function M.add_reply(parent_id, comment, author)
+  ensure_notes_initialized()
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.add_reply(parent_id, comment, author)
+end
+
+--- Export notes
+---@param options ScrewExportOptions
+---@return boolean
+function M.export_notes(options)
+  ensure_notes_initialized()
+  local export_module = require("screw.export.init")
+  return export_module.export_notes(options)
+end
+
+--- Import security findings from SARIF files
+---@param options ScrewImportOptions
+---@return ScrewImportResult
+function M.import_notes(options)
+  ensure_notes_initialized()
+  local import_module = require("screw.import.init")
+  return import_module.import_sarif(options)
+end
+
+--- Get plugin statistics
+---@return table
+function M.get_statistics()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {
+      total = 0,
+      vulnerable = 0,
+      not_vulnerable = 0,
+      todo = 0,
+      by_severity = { high = 0, medium = 0, low = 0, info = 0 },
+      by_author = {},
+      by_cwe = {},
+      files_with_notes = {},
+    }
+  end
+  local notes_manager = require("screw.notes.manager")
+  return notes_manager.get_statistics()
+end
+
+--- Debug: Get storage information
+---@return table
+function M.get_storage_info()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {
+      stats = { total_notes = 0, storage_path = nil, file_exists = false, backend_type = "uninitialized" },
+      notes_count = 0,
+      notes = {},
+    }
+  end
+  local stats = storage.get_storage_stats()
+  local notes = storage.get_all_notes()
+  return {
+    stats = stats,
+    notes_count = #notes,
+    notes = notes,
+  }
+end
+
+--- Get plugin configuration
+---@return screw.InternalConfig
+function M.get_config()
+  ensure_config_initialized()
+  local config = require("screw.config")
+  return config.get()
+end
+
+--- Remove duplicate notes (useful after multiple imports)
+---@return table result with removed_count and remaining_count
+function M.deduplicate_notes()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return {
+      removed_count = 0,
+      remaining_count = 0,
+      success = true,
+    }
+  end
+
+  local all_notes = storage.get_all_notes()
+
+  local unique_notes = {}
+  local seen_ids = {}
+  local removed_count = 0
+
+  for _, note in ipairs(all_notes) do
+    if seen_ids[note.id] then
+      removed_count = removed_count + 1
+    else
+      seen_ids[note.id] = true
+      table.insert(unique_notes, note)
+    end
+  end
+
+  -- Save deduplicated notes
+  storage.replace_all_notes(unique_notes)
+
+  return {
+    removed_count = removed_count,
+    remaining_count = #unique_notes,
+    success = true,
+  }
+end
+
+--- Jump to next security note in current buffer
+---@param opts table? Options table with optional keywords filter
+function M.jump_next(opts)
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    local utils = require("screw.utils")
+    utils.info("No notes available - storage not initialized")
+    return false
+  end
+  local jump = require("screw.jump")
+  return jump.jump_next(opts)
+end
+
+--- Jump to previous security note in current buffer
+---@param opts table? Options table with optional keywords filter
+function M.jump_prev(opts)
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    local utils = require("screw.utils")
+    utils.info("No notes available - storage not initialized")
+    return false
+  end
+  local jump = require("screw.jump")
+  return jump.jump_prev(opts)
+end
+
+--- Get collaboration status
+---@return table Status information
+function M.get_collaboration_status()
+  ensure_collaboration_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.get_status()
+end
+
+--- Switch collaboration mode
+---@param mode "local"|"collaborative" Target mode
+---@param force? boolean Skip confirmation dialog
+---@return boolean Success
+function M.switch_collaboration_mode(mode, force)
+  ensure_collaboration_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.switch_mode(mode, force)
+end
+
+--- Trigger manual synchronization (collaborative mode only)
+---@return boolean Success
+function M.sync_notes()
+  ensure_collaboration_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.sync_now()
+end
+
+--- Show collaboration information dialog
+function M.show_collaboration_info()
+  ensure_collaboration_initialized()
+  local collaboration = require("screw.collaboration")
+  collaboration.show_info()
+end
+
+--- Access migration utilities
+---@return table Migration functions
+function M.migration()
+  ensure_notes_initialized()
+  local collaboration = require("screw.collaboration")
+  return collaboration.migration()
+end
+
+--- Force database reconnection (PostgreSQL backend only)
+---@return boolean Success
+function M.force_reconnect()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return false
+  end
+
+  local backend = storage.get_backend()
+  if backend and backend.force_reconnect then
+    return backend:force_reconnect()
+  else
+    return false
+  end
+end
+
+--- Get offline status (PostgreSQL backend only)
+---@return table|nil Offline status or nil if not supported
+function M.get_offline_status()
+  local storage = require("screw.notes.storage")
+  if not storage.is_initialized() then
+    return nil
+  end
+
+  local backend = storage.get_backend()
+  if backend and backend.get_offline_status then
+    return backend:get_offline_status()
+  else
+    return nil
+  end
+end
+
+--- Get lualine components for statusline integration
+---@return table Available lualine components
+function M.get_lualine_components()
+  ensure_lualine_initialized()
+  local lualine_integration = require("screw.lualine")
+  return lualine_integration.get_components()
+end
+
+--- Check if lualine integration is available and enabled
+---@return boolean, string? Available status and optional error message
+function M.check_lualine_availability()
+  ensure_lualine_initialized()
+  local lualine_integration = require("screw.lualine")
+  return lualine_integration.check_availability()
+end
+
+-- Initialize plugin when module is loaded to set up signs autocmds
+ensure_initialized()
+
+return M

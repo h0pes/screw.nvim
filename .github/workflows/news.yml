@@ -1,0 +1,72 @@
+name: News Update Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+
+permissions:
+  pull-requests: read
+  contents: read
+
+jobs:
+  check-news:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # Fetch full history to check all commits
+          fetch-depth: 0
+          
+      - name: Check if news.txt needs updating
+        run: |
+          # Get list of commits in this PR
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          echo "Checking commits between $BASE_SHA and $HEAD_SHA"
+          
+          # Check if any commits have feat: or breaking change markers
+          FEAT_COMMITS=$(git log --oneline "$BASE_SHA..$HEAD_SHA" --grep="^feat" --grep="^feat(" --grep="^feat:" || true)
+          BREAKING_COMMITS=$(git log --oneline "$BASE_SHA..$HEAD_SHA" --grep="!" || true)
+          
+          echo "Feature commits found: $FEAT_COMMITS"
+          echo "Breaking change commits found: $BREAKING_COMMITS"
+          
+          # Check if news.txt was modified in this PR
+          NEWS_MODIFIED=$(git diff --name-only "$BASE_SHA..$HEAD_SHA" | grep "doc/news.txt" || true)
+          echo "news.txt modified: $NEWS_MODIFIED"
+          
+          # Determine if news.txt update is required
+          NEEDS_NEWS_UPDATE=false
+          
+          if [[ -n "$FEAT_COMMITS" ]]; then
+            echo "✨ Feature commits detected - news.txt update recommended"
+            NEEDS_NEWS_UPDATE=true
+          fi
+          
+          if [[ -n "$BREAKING_COMMITS" ]]; then
+            echo "💥 Breaking change commits detected - news.txt update required"
+            NEEDS_NEWS_UPDATE=true
+          fi
+          
+          # If update is needed but news.txt wasn't modified, remind the author
+          if [[ "$NEEDS_NEWS_UPDATE" == "true" && -z "$NEWS_MODIFIED" ]]; then
+            echo "❌ This PR introduces new features or breaking changes but doc/news.txt was not updated."
+            echo ""
+            echo "Please update doc/news.txt to include:"
+            echo "- New features in the 'NEW FEATURES' section"
+            echo "- Breaking changes in the 'BREAKING CHANGES' section"
+            echo ""
+            echo "This helps users understand what's new and what might affect their usage."
+            echo ""
+            echo "If this is a minor change that doesn't require documentation, you can:"
+            echo "1. Use a different commit type (fix:, docs:, chore:, etc.)"
+            echo "2. Add [skip news] to your commit message"
+            exit 1
+          else
+            echo "✅ No news.txt update required, or news.txt was appropriately updated"
+            exit 0
+          fi
