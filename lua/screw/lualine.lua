@@ -238,8 +238,8 @@ function M.screw_summary()
   local storage = require("screw.notes.storage")
   if not storage.is_initialized() then
     -- Show default empty state without accessing storage
-    local config = get_lualine_config()
-    local component_config = config.components and config.components.summary or {}
+    local lualine_config_obj = get_lualine_config()
+    local component_config = lualine_config_obj.components and lualine_config_obj.components.summary or {}
 
     if not component_config.enabled then
       return ""
@@ -250,7 +250,7 @@ function M.screw_summary()
       total = 0,
       vulnerable = 0,
       not_vulnerable = 0,
-      todo = 0
+      todo = 0,
     }
     return format_component("summary", data)
   end
@@ -300,8 +300,8 @@ function M.screw_file_status()
   local storage = require("screw.notes.storage")
   if not storage.is_initialized() then
     -- Show clean state without accessing storage
-    local config = get_lualine_config()
-    local component_config = config.components and config.components.file_status or {}
+    local lualine_config_obj = get_lualine_config()
+    local component_config = lualine_config_obj.components and lualine_config_obj.components.file_status or {}
 
     if not component_config.enabled then
       return ""
@@ -309,7 +309,6 @@ function M.screw_file_status()
 
     -- Return clean state when no storage yet
     local icons = component_config.icons or {}
-    local colors = component_config.colors or {}
     local clean_icon = icons.clean or "✓"
 
     return string.format("%%#lualine_c_normal# %s clean", clean_icon)
