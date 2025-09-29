@@ -1741,6 +1741,12 @@ screw.nvim's collaboration system uses a modern **three-tier architecture**:
 - **Transport**: HTTP/JSON with optional HTTPS encryption
 - **Dependencies**: System curl (pre-installed), no database drivers required
 
+
+
+https://github.com/user-attachments/assets/7ce62345-dc35-429b-9e7e-d3037e5a1486
+
+
+
 ### :rocket: Quick Setup
 
 **1. Deploy collaboration server:**
