@@ -1,7 +1,7 @@
 *screw.nvim.txt*              For 0.9.0             Last change: 2026 April 08
 
 ==============================================================================
-Table of Contents                           *screw.nvim-table-of-contents-top*
+Table of Contents                               *screw.nvim-table-of-contents*
 
   - Features                                             |screw.nvim-features|
   - Table of Contents                           |screw.nvim-table-of-contents|
