@@ -4,7 +4,7 @@
 Table of Contents                               *screw.nvim-table-of-contents*
 
   - Features                                             |screw.nvim-features|
-  - Table of Contents                           |screw.nvim-table-of-contents|
+  - Contents                                             |screw.nvim-contents|
   - Installation                                     |screw.nvim-installation|
   - Quick Start                                       |screw.nvim-quick-start|
   - Configuration                                   |screw.nvim-configuration|
@@ -83,7 +83,7 @@ FEATURES                                                 *screw.nvim-features*
 - **Health diagnostics** - Comprehensive troubleshooting and validation
 
 
-TABLE OF CONTENTS                               *screw.nvim-table-of-contents*
+CONTENTS                                                 *screw.nvim-contents*
 
 Installation ~
 

@@ -15,6 +15,7 @@ screw.nvim-available-highlight-groups	screw.nvim.txt	/*screw.nvim-available-high
 screw.nvim-collaboration	screw.nvim.txt	/*screw.nvim-collaboration*
 screw.nvim-commands	screw.nvim.txt	/*screw.nvim-commands*
 screw.nvim-configuration	screw.nvim.txt	/*screw.nvim-configuration*
+screw.nvim-contents	screw.nvim.txt	/*screw.nvim-contents*
 screw.nvim-contributing	screw.nvim.txt	/*screw.nvim-contributing*
 screw.nvim-development	screw.nvim.txt	/*screw.nvim-development*
 screw.nvim-documentation	screw.nvim.txt	/*screw.nvim-documentation*
@@ -27,7 +28,6 @@ screw.nvim-lualine-integration	screw.nvim.txt	/*screw.nvim-lualine-integration*
 screw.nvim-performance-&-lazy-loading	screw.nvim.txt	/*screw.nvim-performance-&-lazy-loading*
 screw.nvim-quick-start	screw.nvim.txt	/*screw.nvim-quick-start*
 screw.nvim-requirements	screw.nvim.txt	/*screw.nvim-requirements*
-screw.nvim-table-of-contents	screw.nvim.txt	/*screw.nvim-table-of-contents*
 screw.nvim-table-of-contents	screw.nvim.txt	/*screw.nvim-table-of-contents*
 screw.nvim.txt	screw.nvim.txt	/*screw.nvim.txt*
 screw_api.txt	screw_api.txt	/*screw_api.txt*
