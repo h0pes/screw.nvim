@@ -367,9 +367,7 @@ function M.get_project_root()
   -- aren't valid directories and would cause `:cd`/chdir to raise E344
   -- when fed to git -C below.
   local current_file = vim.fn.expand("%:p")
-  local has_real_file = current_file
-    and current_file ~= ""
-    and vim.fn.filereadable(current_file) == 1
+  local has_real_file = current_file and current_file ~= "" and vim.fn.filereadable(current_file) == 1
 
   if has_real_file then
     -- Try to find git root by going up the directory tree from current file
