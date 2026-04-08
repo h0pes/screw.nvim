@@ -75,7 +75,7 @@ By default, security notes are stored in timestamped files (e.g., `screw_notes_2
 - **📊 Lualine integration** - Display security notes information directly in your statusline with customizable components
 - **🔍 Health diagnostics** - Comprehensive troubleshooting and validation
 
-## :bookmark_tabs: Table of Contents
+## :bookmark_tabs: Contents
 
 <details>
 <summary><a href="#package-installation">Installation</a></summary>
