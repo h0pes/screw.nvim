@@ -7,6 +7,9 @@
 local utils = require("screw.utils")
 local config = require("screw.config")
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 ---@class PostgreSQLBackend : StorageBackend
 local PostgreSQLBackend = {}
 PostgreSQLBackend.__index = PostgreSQLBackend
@@ -200,7 +203,7 @@ end
 --- Check if we should attempt reconnection (with exponential backoff)
 ---@return boolean Should attempt reconnection
 function PostgreSQLBackend:should_attempt_reconnection()
-  local now = vim.loop.now()
+  local now = uv.now()
   local time_since_last_attempt = now - self.offline.last_connection_attempt
 
   -- Exponential backoff: 1s, 2s, 4s, 8s, 16s, max 30s
@@ -224,7 +227,7 @@ function PostgreSQLBackend:connect()
     return false, "Connection retry backoff active"
   end
 
-  self.offline.last_connection_attempt = vim.loop.now()
+  self.offline.last_connection_attempt = uv.now()
 
   -- Get PostgreSQL module
   local pg_module, pg_error = get_postgresql_module()
@@ -651,7 +654,7 @@ function PostgreSQLBackend:load_notes()
   end
 
   self.cache.dirty = false
-  self.cache.last_sync = vim.loop.now()
+  self.cache.last_sync = uv.now()
 end
 
 --- Save notes to PostgreSQL database
@@ -981,7 +984,7 @@ function PostgreSQLBackend:start_sync()
   -- For now, we'll use periodic polling as a fallback
 
   self.sync.enabled = true
-  self.sync.timer = vim.loop.new_timer()
+  self.sync.timer = uv.new_timer()
 
   if self.sync.timer then
     self.sync.timer:start(
@@ -1020,7 +1023,7 @@ function PostgreSQLBackend:periodic_sync()
 
   -- Simple approach: reload notes if they might have changed
   -- In a full implementation, this would be more sophisticated
-  local current_time = vim.loop.now()
+  local current_time = uv.now()
   if current_time - self.cache.last_sync > (self.collaboration_config.sync_interval or 5000) then
     self:load_notes()
   end

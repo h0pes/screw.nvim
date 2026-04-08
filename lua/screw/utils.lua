@@ -362,10 +362,17 @@ function M.get_project_root()
     return vim.g.screw_project_root
   end
 
-  -- Try to find git root by going up the directory tree from current file
+  -- Only consider the current buffer if it points to a real file on disk.
+  -- Non-file buffers (e.g. `health://`, `fugitive://`) produce paths that
+  -- aren't valid directories and would cause `:cd`/chdir to raise E344
+  -- when fed to git -C below.
   local current_file = vim.fn.expand("%:p")
+  local has_real_file = current_file
+    and current_file ~= ""
+    and vim.fn.filereadable(current_file) == 1
 
-  if current_file and current_file ~= "" then
+  if has_real_file then
+    -- Try to find git root by going up the directory tree from current file
     local dir = vim.fn.fnamemodify(current_file, ":h")
 
     while dir and dir ~= "/" and dir ~= "." do
@@ -379,29 +386,23 @@ function M.get_project_root()
       end
       dir = parent
     end
-  end
 
-  -- Try git command from current file's directory
-  if current_file and current_file ~= "" then
+    -- Fall back to running git from the file's directory using `-C`,
+    -- which avoids vim.fn.chdir() (and the cdpath search that produces
+    -- E344 in non-file buffers like the :checkhealth scratch buffer).
     local file_dir = vim.fn.fnamemodify(current_file, ":h")
-
-    -- Change to file directory temporarily
-    local old_cwd = vim.fn.getcwd()
-    vim.fn.chdir(file_dir)
-
-    local git_root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
-
-    -- Restore original directory
-    vim.fn.chdir(old_cwd)
-
-    if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
-      vim.g.screw_project_root = git_root
-      return git_root
+    if vim.fn.isdirectory(file_dir) == 1 then
+      local git_root = vim.fn.system({ "git", "-C", file_dir, "rev-parse", "--show-toplevel" }):gsub("[\r\n]", "")
+      if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
+        vim.g.screw_project_root = git_root
+        return git_root
+      end
     end
   end
 
   -- Try git command from current working directory as fallback
-  local git_root = vim.fn.system("git rev-parse --show-toplevel 2>/dev/null"):gsub("\n", "")
+  local nvim_cwd = vim.fn.getcwd()
+  local git_root = vim.fn.system({ "git", "-C", nvim_cwd, "rev-parse", "--show-toplevel" }):gsub("[\r\n]", "")
 
   if vim.v.shell_error == 0 and git_root ~= "" and git_root ~= "." then
     vim.g.screw_project_root = git_root
@@ -409,7 +410,6 @@ function M.get_project_root()
   end
 
   -- Fall back to the initial working directory
-  local nvim_cwd = vim.fn.getcwd()
   vim.g.screw_project_root = nvim_cwd
   return nvim_cwd
 end

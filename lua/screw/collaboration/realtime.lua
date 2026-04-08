@@ -6,6 +6,9 @@
 
 local utils = require("screw.utils")
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 ---@class RealtimeSync
 local RealtimeSync = {}
 RealtimeSync.__index = RealtimeSync
@@ -141,7 +144,7 @@ function RealtimeSync:start_notification_polling()
     return
   end
 
-  self.notification_timer = vim.loop.new_timer()
+  self.notification_timer = uv.new_timer()
   if not self.notification_timer then
     return
   end
@@ -443,7 +446,7 @@ function RealtimeSync:fallback_sync_check()
     -- Emit a general sync update event
     self:emit("sync_update", {
       last_update = result[1].last_update,
-      sync_timestamp = vim.loop.now(),
+      sync_timestamp = uv.now(),
     })
   end
 end

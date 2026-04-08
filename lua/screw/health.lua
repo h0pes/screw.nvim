@@ -20,9 +20,11 @@ local function check_neovim_version()
     return false
   end
 
-  -- Check for important Neovim features
+  -- Check for important Neovim features.
+  -- Note: do not query "lua" — it's not a queryable feature flag in Neovim
+  -- (Lua is built in and always available; has("lua") returns 0 even though
+  -- Lua works fine), so listing it here would emit a spurious warning.
   local features = {
-    { "lua", "Lua support" },
     { "autocmd", "Autocommand support" },
     { "cmdline_hist", "Command history" },
     { "float", "Floating windows" },
@@ -162,11 +164,14 @@ local function check_lua_dependencies()
     end
   end
 
-  -- Check Neovim-specific Lua modules
+  -- Check Neovim-specific Lua modules.
+  -- Note: `vim.uv` is the canonical name on Neovim 0.10+ (replaces the
+  -- deprecated `vim.loop`); accessing `vim.loop` here would emit a
+  -- deprecation warning during :checkhealth.
   local nvim_modules = {
     { "vim.fn", "Vim function interface" },
     { "vim.api", "Neovim API" },
-    { "vim.loop", "Event loop interface" },
+    { "vim.uv", "Event loop interface" },
     { "vim.validate", "Validation functions" },
     { "vim.health", "Health check system" },
     { "vim.keymap", "Keymap functions" },
@@ -174,8 +179,12 @@ local function check_lua_dependencies()
 
   for _, module_info in ipairs(nvim_modules) do
     local module_path, description = module_info[1], module_info[2]
+    -- Walk the dotted path from the global table. Starting from `vim`
+    -- (the previous behavior) caused every check to bail on the first
+    -- iteration (looking up `vim["vim"]`), producing 6 false-positive
+    -- "not available" errors.
     local parts = vim.split(module_path, ".", { plain = true })
-    local obj = vim
+    local obj = _G
     local available = true
 
     for _, part in ipairs(parts) do

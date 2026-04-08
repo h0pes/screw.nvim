@@ -6,6 +6,9 @@
 local utils = require("screw.utils")
 local _ = require("screw.config") -- config loaded for potential future use
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 ---@class MigrationUtil
 local MigrationUtil = {}
 
@@ -33,7 +36,7 @@ function MigrationUtil.migrate_local_to_db(progress_callback)
     notes_migrated = 0,
     replies_migrated = 0,
     errors_count = 0,
-    start_time = vim.loop.now(),
+    start_time = uv.now(),
   }
 
   -- Initialize PostgreSQL backend
@@ -59,7 +62,7 @@ function MigrationUtil.migrate_local_to_db(progress_callback)
   if #local_notes == 0 then
     pg_backend:disconnect()
     utils.info("No local notes found to migrate")
-    stats.end_time = vim.loop.now()
+    stats.end_time = uv.now()
     stats.duration = (stats.end_time - stats.start_time) / 1000
     return true, nil, stats
   end
@@ -119,7 +122,7 @@ function MigrationUtil.migrate_local_to_db(progress_callback)
 
   pg_backend:disconnect()
 
-  stats.end_time = vim.loop.now()
+  stats.end_time = uv.now()
   stats.duration = (stats.end_time - stats.start_time) / 1000
 
   local success_msg = string.format(
@@ -146,7 +149,7 @@ function MigrationUtil.migrate_db_to_local(progress_callback)
     notes_migrated = 0,
     replies_migrated = 0,
     errors_count = 0,
-    start_time = vim.loop.now(),
+    start_time = uv.now(),
   }
 
   -- Initialize PostgreSQL backend
@@ -165,7 +168,7 @@ function MigrationUtil.migrate_db_to_local(progress_callback)
   if #db_notes == 0 then
     pg_backend:disconnect()
     utils.info("No database notes found to migrate")
-    stats.end_time = vim.loop.now()
+    stats.end_time = uv.now()
     stats.duration = (stats.end_time - stats.start_time) / 1000
     return true, nil, stats
   end
@@ -235,7 +238,7 @@ function MigrationUtil.migrate_db_to_local(progress_callback)
 
   pg_backend:disconnect()
 
-  stats.end_time = vim.loop.now()
+  stats.end_time = uv.now()
   stats.duration = (stats.end_time - stats.start_time) / 1000
 
   local success_msg = string.format(
@@ -265,7 +268,7 @@ function MigrationUtil.sync_bidirectional(conflict_strategy, progress_callback)
     notes_migrated = 0,
     replies_migrated = 0,
     errors_count = 0,
-    start_time = vim.loop.now(),
+    start_time = uv.now(),
   }
 
   -- Initialize both backends
@@ -385,7 +388,7 @@ function MigrationUtil.sync_bidirectional(conflict_strategy, progress_callback)
 
   pg_backend:disconnect()
 
-  stats.end_time = vim.loop.now()
+  stats.end_time = uv.now()
   stats.duration = (stats.end_time - stats.start_time) / 1000
 
   local success_msg = string.format(

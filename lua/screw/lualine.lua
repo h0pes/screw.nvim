@@ -6,6 +6,9 @@
 
 local M = {}
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 -- Cache system for performance
 local cache = {
   summary = { data = nil, timestamp = 0 },
@@ -26,7 +29,7 @@ end
 --- Get current timestamp
 ---@return number
 local function get_timestamp()
-  return vim.loop.hrtime() / 1e6 -- Convert to milliseconds
+  return uv.hrtime() / 1e6 -- Convert to milliseconds
 end
 
 --- Invalidate all caches (called when notes change)

@@ -7,6 +7,9 @@
 local config = require("screw.config")
 local utils = require("screw.utils")
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 local M = {}
 
 --- Current collaboration state
@@ -54,7 +57,7 @@ function M.start_sync()
   local sync_interval = config.get_option("collaboration.sync_interval") or 1000
   local sync = require("screw.collaboration.sync")
 
-  M.sync_timer = vim.loop.new_timer()
+  M.sync_timer = uv.new_timer()
   M.sync_timer:start(
     0,
     sync_interval,

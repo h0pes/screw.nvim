@@ -5,6 +5,9 @@
 
 local utils = require("screw.utils")
 
+-- vim.uv is the canonical name on Neovim 0.10+; fall back to vim.loop for 0.9.
+local uv = vim.uv or vim.loop
+
 local M = {}
 
 --- Create a new JSON storage backend
@@ -106,10 +109,10 @@ function M.new(config)
     local files = vim.fn.glob(glob_pattern, false, true)
 
     if type(files) == "table" and #files > 0 then
-      -- Sort files by modification time (newest first)
+      -- Sort files by modification time (newest first).
       table.sort(files, function(a, b)
-        local stat_a = vim.loop.fs_stat(a)
-        local stat_b = vim.loop.fs_stat(b)
+        local stat_a = uv.fs_stat(a)
+        local stat_b = uv.fs_stat(b)
         if stat_a and stat_b then
           return stat_a.mtime.sec > stat_b.mtime.sec
         end
